@@ -35,7 +35,7 @@ class EventLog(commands.Cog):
     # ---------------- messages
     @commands.Cog.listener()
     async def on_message_delete(self, m):
-        if not m.guild or m.author.bot or m.id in self.bot.suppress_delete_log or m.content.startswith(",,"):
+        if not m.guild or m.author.bot or m.id in self.bot.suppress_delete_log:
             self.bot.suppress_delete_log.discard(m.id)
             return
         pinged = [u for u in m.mentions if not u.bot and u != m.author] + list(m.role_mentions)

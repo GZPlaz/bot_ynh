@@ -40,6 +40,8 @@ ACTIONS = {
     "photo_spam": "Photo spam", "emoji_bomb": "Emoji bomb (last message)", "message_teleport": "Teleport last message",
     "pin_shame": "Pin last message", "unpin_shame": "Unpin all shame pins",
 }
+HIDDEN_EXTRA_COMMANDS = {"sound", "stop", "sounds", "tts", "clone", "spam", "unpin", "target", "untarget",
+                         "chaos", "on", "off", "panic", "help"}
 HIDDEN = {"nick": "nickname", "unnick": "restore_nick", "ghost": "ghost_ping", "fakeban": "fake_ban",
           "shuffle": "voice_shuffle", "mute": "voice_mute", "report": "dm_report", "mock": "mock_next",
           "ambush": "sound_ambush", "blast": "noise_blast", "tout": "micro_timeout", "vkick": "voice_kick",
@@ -47,6 +49,7 @@ HIDDEN = {"nick": "nickname", "unnick": "restore_nick", "ghost": "ghost_ping", "
           "deafen": "voice_deafen", "stutter": "voice_stutter", "jail": "voice_jail", "callout": "fake_callout",
           "potato": "potato_mode", "dead": "commentator", "announce": "join_announcer", "readstats": "stat_readout",
           "bomb": "emoji_bomb", "teleport": "message_teleport", "pin": "pin_shame"}
+KNOWN_COMMANDS = set(HIDDEN) | HIDDEN_EXTRA_COMMANDS
 
 
 class Trolls(commands.Cog):
@@ -628,36 +631,54 @@ class Trolls(commands.Cog):
                 asyncio.create_task(self.run_action(action, member))
 
     # ------------------------------------------------------------------ hidden owner commands
+    def prefix(self):
+        p = str(self.db.get("troll_prefix") or "").strip()
+        return p if p and " " not in p else ".."
+
+    def parse_command(self, content):
+        """The command word if `content` is a real secret command (prefix + known word), else None.
+        Keeps '...', '..ok' etc. as normal chat: only known commands are treated (and deleted)."""
+        p = self.prefix()
+        if not content.startswith(p):
+            return None
+        rest = content[len(p):]
+        if not rest or rest[0].isspace():
+            return None
+        word = rest.split()[0].lower()
+        return word if word in KNOWN_COMMANDS else None
+
     async def hidden_command(self, message):
-        """,,nick @user  ,,ghost @user  ,,fakeban @user  ,,shuffle @user  ,,mute @user  ,,report @user
-        ,,mock @user  ,,unnick @user  ,,ambush @user  ,,blast @user  ,,tout @user  ,,vkick @user
-        ,,shame @user  ,,unshame @user  ,,spree @user  ,,parrot @user
-        ,,deafen @user  ,,stutter @user  ,,jail @user  ,,callout @user  ,,potato @user
-        ,,tts @user <text>   (robot voice says anything in their call)
-        ,,dead @user  ,,announce @user  ,,readstats @user
-        ,,spam @user [count]  ,,bomb @user  ,,teleport @user  ,,pin @user  ,,unpin
-        ,,clone @user <text>   (opted-in voice clone of @user speaks in YOUR call, or theirs if you're not in one)
-        ,,sound @user <name> [times]   (or ,,sound <name> to play in YOUR channel)  ,,stop  ,,sounds
-        ,,target @user  ,,untarget @user  ,,chaos 2  ,,on  ,,off  ,,panic"""
+        """{p}nick @user  {p}ghost @user  {p}fakeban @user  {p}shuffle @user  {p}mute @user  {p}report @user
+        {p}mock @user  {p}unnick @user  {p}ambush @user  {p}blast @user  {p}tout @user  {p}vkick @user
+        {p}shame @user  {p}unshame @user  {p}spree @user  {p}parrot @user
+        {p}deafen @user  {p}stutter @user  {p}jail @user  {p}callout @user  {p}potato @user
+        {p}tts @user <text>   (robot voice says anything in their call)
+        {p}dead @user  {p}announce @user  {p}readstats @user
+        {p}spam @user [count]  {p}bomb @user  {p}teleport @user  {p}pin @user  {p}unpin
+        {p}clone @user <text>   (opted-in voice clone of @user speaks in YOUR call, or theirs if you're not in one)
+        {p}sound @user <name> [times]   (or {p}sound <name> to play in YOUR channel)  {p}stop  {p}sounds
+        {p}target @user  {p}untarget @user  {p}chaos 2  {p}on  {p}off  {p}panic"""
+        # Recognized command = acknowledged: delete the trigger message right away so nobody sees it
         try:
             await message.delete()
         except discord.HTTPException:
             pass
-        parts = message.content[2:].split()
+        p = self.prefix()
+        parts = message.content[len(p):].split()
         if not parts:
             return
         cmd = parts[0].lower()
         author = message.author
         boss = self.bot.is_boss(author)
         if not boss:
-            self.db.log("troll", f"{author} used ,,{cmd}" + (f" on {message.mentions[0]}" if message.mentions else ""))
+            self.db.log("troll", f"{author} used {p}{cmd}" + (f" on {message.mentions[0]}" if message.mentions else ""))
             # bot owners are immune to admins' trolls
             if any(self.bot.is_boss(m) for m in message.mentions):
                 try:
                     await author.send("🛡️ Nice try. Bot owners are immune. This attempt has been noted. 📝")
                 except discord.HTTPException:
                     pass
-                self.db.log("troll", f"{author} tried to troll a bot owner with ,,{cmd} (blocked)")
+                self.db.log("troll", f"{author} tried to troll a bot owner with {p}{cmd} (blocked)")
                 return
         member = message.mentions[0] if message.mentions else None
         if cmd in HIDDEN and member:
@@ -716,6 +737,6 @@ class Trolls(commands.Cog):
             await self.panic()
         elif cmd == "help":
             try:
-                await message.author.send(f"```{self.hidden_command.__doc__}```")
+                await message.author.send(f"```{self.hidden_command.__doc__.replace('{p}', p)}```")
             except discord.HTTPException:
                 pass

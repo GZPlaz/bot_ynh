@@ -115,7 +115,7 @@ In Discord: <code>/modlogs @user</code>, <code>/case 42</code>, <code>/note</cod
   <li>The <b>timed loop</b> (every N minutes) rolls the same odds and picks one active troll. Voice trolls only fire if they're in voice; the harsher ones are rarer.</li>
   <li>Any troll can be fired manually with <b>Fire 🚀</b> on the Troll Control page, or with a <a href="#secret">secret command</a>.</li>
   <li><b>Chaos</b> (0–5) scales everything. 0 means only manual trolls.</li>
-  <li>The <b>🚨 Panic button</b> (dashboard, or <code>,,panic</code>) turns trolling off and undoes everything reversible: nicknames, shame roles, target timeouts and potato channels.</li>
+  <li>The <b>🚨 Panic button</b> (dashboard, or <code>{{ tp }}panic</code>) turns trolling off and undoes everything reversible: nicknames, shame roles, target timeouts and potato channels.</li>
   <li>Bot owners are immune to everything and always win <code>/stats</code>, <code>/clutch</code> and <code>/roast</code>.</li>
 </ul>
 <h3>All {{ d.trolls|length }} trolls</h3>
@@ -126,10 +126,11 @@ In Discord: <code>/modlogs @user</code>, <code>/case 42</code>, <code>/note</cod
 
 <h2 id="secret">10. 🤫 Secret chat commands</h2>
 <p><b>Who can use them:</b> bot owners (General → Owner IDs), plus, by default, <b>every server admin</b> (members with the Administrator permission) and an optional extra role.
-Change this in <a href="{{ base }}/settings/trollcfg">Troll Arsenal</a>. Type them in any channel: the message is deleted instantly and never appears in the server's event log.</p>
+Change this in <a href="{{ base }}/settings/trollcfg">Troll Arsenal</a>. Type them in any channel, e.g. <code>{{ tp }}nick @dave</code>. As soon as the bot accepts a command it <b>deletes your message</b>, so nobody sees who did it, and it never appears in the server's event log.
+Only real command words count: <code>...</code>, <code>..ok</code> or <code>..lol</code> stay normal chat, and nothing happens for people who aren't allowed to use the commands. The prefix can be changed in <a href="{{ base }}/settings/trollcfg">Troll Arsenal</a>.</p>
 <ul><li>Bot owners are <b>immune</b>: if an admin aims a secret command at an owner, it's blocked and they get a "nice try" DM.</li>
 <li>Every use by a non-owner is recorded in the panel's <a href="{{ base }}/logs?kind=troll">Logs → troll</a>, so you can see who trolled whom.</li>
-<li><code>,,clone</code> by an admin only works on clones whose owner allowed "anyone".</li></ul>
+<li><code>{{ tp }}clone</code> by an admin only works on clones whose owner allowed "anyone".</li></ul>
 <table>{% for cmd, desc in d.hidden %}<tr><td style="white-space:nowrap"><code>{{ cmd }}</code></td><td>{{ desc }}</td></tr>{% endfor %}</table>
 
 <h2 id="sound">11. Soundboard &amp; robot voice</h2>
@@ -151,7 +152,7 @@ Deleting a pack sound is remembered, so it won't come back on restart. There are
   <li><b>Lazy friends:</b> upload the clip for them on the Soundboard page instead. The bot DMs them the clip with <b>Allow (owners only)</b>,
   <b>Allow (everyone)</b> and <b>Delete</b> buttons, and the clone activates the moment they tap Allow. If their DMs are closed, they run
   <code>/voiceclone status</code> to get the same buttons. Unapproved samples are deleted after 7 days.</li>
-  <li>Use it with <code>/mimic</code>, <code>,,clone @user text</code>, or the voice picker on the Soundboard.</li>
+  <li>Use it with <code>/mimic</code>, <code>{{ tp }}clone @user text</code>, or the voice picker on the Soundboard.</li>
   <li><code>/voiceclone optout</code> deletes the sample instantly. You can also delete clones from the Soundboard page.</li>
 </ol>
 <div class="note">A clone only ever activates after the person themselves agrees in Discord, whether they uploaded the clip or you did. The clone service adds an inaudible AI watermark, and <code>/mimic</code> labels its output in chat as AI.</div>
@@ -165,6 +166,9 @@ Deleting a pack sound is remembered, so it won't come back on restart. There are
   <li><b>Suggesting a change:</b> anyone runs <code>/tier suggest @player &lt;tier&gt; &lt;reason&gt;</code>. A reason of 10–300 characters is required. Nothing changes until a reviewer approves.</li>
   <li><b>Reviewing:</b> suggestions appear in the <b>review channel</b> with ✅ Approve / ❌ Reject buttons (reject asks for an optional note), and on the <a href="{{ base }}/leaderboard">Leaderboard</a> page.
   The requester gets a DM with the verdict. Reviewers are bot owners, anyone with Manage Server, and the optional reviewer role. Nobody can review their own suggestion.</li>
+  <li><b>🎮 Positions:</b> players pick up to 3 positions (Entry Fragger, Support, Anchor, Roamer, IGL…) with <code>/position set</code>, a dropdown.
+  Reviewers can set anyone's with <code>/position set @player</code>, and you can edit them on the Leaderboard page. The list of positions, the maximum per player,
+  and whether players may set their own are in Leaderboard settings. Positions appear next to names in <code>/leaderboard</code>, <code>/tier show</code>, the panel and the public page; <code>/position list</code> shows who plays what.</li>
   <li><b>Direct edits:</b> reviewers can use <code>/tier set</code> (tier 0 removes someone), or the "Set directly" form in the panel. These are logged in the history too.</li>
   <li><b>Limits:</b> one pending suggestion per person per player, and a configurable maximum of open suggestions per person.</li>
   <li><b>Public page (optional):</b> turn on "Public leaderboard page" to get a read-only tier list at <a href="{{ base }}/public/leaderboard">{{ base }}/public/leaderboard</a>

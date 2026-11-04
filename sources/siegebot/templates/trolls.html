@@ -43,24 +43,24 @@
   <h3 style="margin-top:0">Secret in-chat commands (owners + server admins)</h3>
   <p class="muted">Type these in any channel. The message is deleted instantly, nobody sees it was you.</p>
   <table>
-    <tr><td><code>,,nick @user</code> / <code>,,unnick @user</code></td><td>Rename / restore</td></tr>
-    <tr><td><code>,,ghost @user</code></td><td>Ghost ping</td></tr>
-    <tr><td><code>,,fakeban @user</code></td><td>Fake ban announcement in the current channel</td></tr>
-    <tr><td><code>,,shuffle @user</code> / <code>,,mute @user</code></td><td>Voice shuffle / 5s server mute</td></tr>
-    <tr><td><code>,,report @user</code></td><td>Fake report DM</td></tr>
-    <tr><td><code>,,tout @user</code> · <code>,,vkick @user</code></td><td>30-90s timeout / disconnect from voice</td></tr>
-    <tr><td><code>,,shame @user</code> / <code>,,unshame @user</code></td><td>Role of shame on / off</td></tr>
-    <tr><td><code>,,spree @user</code> · <code>,,parrot @user</code></td><td>Ghost-ping spree / parrot everything they say for 3 min</td></tr>
-    <tr><td><code>,,deafen</code> · <code>,,stutter</code> · <code>,,jail</code> · <code>,,callout</code> · <code>,,potato</code> <code>@user</code></td><td>Deafen 6s / mic stutter / voice jail / robot fake callout / 8 kbps potato mode</td></tr>
-    <tr><td><code>,,tts @user your text here</code></td><td>Robot voice says anything in their call</td></tr>
-    <tr><td><code>,,dead</code> · <code>,,announce</code> · <code>,,readstats</code> <code>@user</code></td><td>Death commentary / arrival announcement / stats read aloud</td></tr>
-    <tr><td><code>,,spam @user [count]</code> · <code>,,bomb</code> · <code>,,teleport</code> · <code>,,pin</code> <code>@user</code> · <code>,,unpin</code></td><td>Photo spam here / emoji-bomb, teleport or pin their last message / unpin all shame pins</td></tr>
-    <tr><td><code>,,clone @user your text</code></td><td>Opted-in voice clone of @user speaks (in your call, or theirs)</td></tr>
-    <tr><td><code>,,ambush @user</code> / <code>,,blast @user</code></td><td>Join their call: fake cue / loud noise</td></tr>
-    <tr><td><code>,,sound @user air_horn 3</code> · <code>,,sound loud</code> · <code>,,stop</code> · <code>,,sounds</code></td><td>Play a specific sound N times (in their call, or yours) / stop / DM list</td></tr>
-    <tr><td><code>,,mock @user</code></td><td>Mock their next message</td></tr>
-    <tr><td><code>,,target @user</code> / <code>,,untarget @user</code></td><td>Add with all trolls / release</td></tr>
-    <tr><td><code>,,chaos 2</code> · <code>,,on</code> · <code>,,off</code> · <code>,,panic</code> · <code>,,help</code></td><td>Chaos level, toggle, panic, DM help</td></tr>
+    <tr><td><code>{{ tp }}nick @user</code> / <code>{{ tp }}unnick @user</code></td><td>Rename / restore</td></tr>
+    <tr><td><code>{{ tp }}ghost @user</code></td><td>Ghost ping</td></tr>
+    <tr><td><code>{{ tp }}fakeban @user</code></td><td>Fake ban announcement in the current channel</td></tr>
+    <tr><td><code>{{ tp }}shuffle @user</code> / <code>{{ tp }}mute @user</code></td><td>Voice shuffle / 5s server mute</td></tr>
+    <tr><td><code>{{ tp }}report @user</code></td><td>Fake report DM</td></tr>
+    <tr><td><code>{{ tp }}tout @user</code> · <code>{{ tp }}vkick @user</code></td><td>30-90s timeout / disconnect from voice</td></tr>
+    <tr><td><code>{{ tp }}shame @user</code> / <code>{{ tp }}unshame @user</code></td><td>Role of shame on / off</td></tr>
+    <tr><td><code>{{ tp }}spree @user</code> · <code>{{ tp }}parrot @user</code></td><td>Ghost-ping spree / parrot everything they say for 3 min</td></tr>
+    <tr><td><code>{{ tp }}deafen</code> · <code>{{ tp }}stutter</code> · <code>{{ tp }}jail</code> · <code>{{ tp }}callout</code> · <code>{{ tp }}potato</code> <code>@user</code></td><td>Deafen 6s / mic stutter / voice jail / robot fake callout / 8 kbps potato mode</td></tr>
+    <tr><td><code>{{ tp }}tts @user your text here</code></td><td>Robot voice says anything in their call</td></tr>
+    <tr><td><code>{{ tp }}dead</code> · <code>{{ tp }}announce</code> · <code>{{ tp }}readstats</code> <code>@user</code></td><td>Death commentary / arrival announcement / stats read aloud</td></tr>
+    <tr><td><code>{{ tp }}spam @user [count]</code> · <code>{{ tp }}bomb</code> · <code>{{ tp }}teleport</code> · <code>{{ tp }}pin</code> <code>@user</code> · <code>{{ tp }}unpin</code></td><td>Photo spam here / emoji-bomb, teleport or pin their last message / unpin all shame pins</td></tr>
+    <tr><td><code>{{ tp }}clone @user your text</code></td><td>Opted-in voice clone of @user speaks (in your call, or theirs)</td></tr>
+    <tr><td><code>{{ tp }}ambush @user</code> / <code>{{ tp }}blast @user</code></td><td>Join their call: fake cue / loud noise</td></tr>
+    <tr><td><code>{{ tp }}sound @user air_horn 3</code> · <code>{{ tp }}sound loud</code> · <code>{{ tp }}stop</code> · <code>{{ tp }}sounds</code></td><td>Play a specific sound N times (in their call, or yours) / stop / DM list</td></tr>
+    <tr><td><code>{{ tp }}mock @user</code></td><td>Mock their next message</td></tr>
+    <tr><td><code>{{ tp }}target @user</code> / <code>{{ tp }}untarget @user</code></td><td>Add with all trolls / release</td></tr>
+    <tr><td><code>{{ tp }}chaos 2</code> · <code>{{ tp }}on</code> · <code>{{ tp }}off</code> · <code>{{ tp }}panic</code> · <code>{{ tp }}help</code></td><td>Chaos level, toggle, panic, DM help</td></tr>
   </table>
 </div>
 {% endblock %}

@@ -55,7 +55,8 @@ plus custom `!commands` and keyword auto-responders that you manage from the pan
 
 **🏅 Leaderboard**: players are rated Tier 1 (best) to Tier 5 (worst). Anyone can `/tier suggest` a change *with a reason*;
 reviewers approve or reject it with buttons in a review channel or in the panel, and the requester gets the verdict by DM. There's a full history,
-`/leaderboard`, and an optional public read-only tier list page.
+`/leaderboard`, and an optional public read-only tier list page. Players also get **positions** (Entry Fragger, Support,
+Anchor, Roamer, IGL…, editable list, up to 3 each) via `/position set` or the panel, shown next to their name everywhere.
 
 **🧩 Plugins**: the voice clone service is optional. The YunoHost installer asks whether you want it, and you can add or remove it later under
 Applications → SiegeBot → Configuration → Plugins.
@@ -73,8 +74,8 @@ jail, a robot voice yelling fake callouts in their call, and potato mode (their 
 Robot-voice chaos: every victim gets their own personal robot voice, which **reads their text messages aloud** while they're in voice.
 A **join announcer** greets them ("Please lower your expectations"), a **sports commentator** narrates the moment they type "dead",
 "rip" or "my bad", and the robot can **read their stats to the whole call**. Trolls fire at random based on
-*chance × chaos*, from a timed loop, or on demand from the panel. Bot owners **and server admins** (configurable) can also type secret `,,` commands in chat (owners stay immune to them, and admin use is logged); the bot deletes
-them instantly (`,,help` DMs you the list).
+*chance × chaos*, from a timed loop, or on demand from the panel. Bot owners **and server admins** (configurable) can also type secret `..` commands in chat (owners stay immune to them, and admin use is logged); the bot deletes
+them instantly (`..help` DMs you the list).
 The 🚨 **Panic button** turns everything off and restores everyone's nicknames.
 
 **Soundboard** (panel → *Soundboard*): ships with an **R6 sound pack** of 59 clips from MyInstants' "r6" search
@@ -82,12 +83,12 @@ The 🚨 **Panic button** turns everything off and restores everyone's nicknames
 ⚠️ The pack is mostly ripped game audio, so **keep this repository private**. There are pure noise ones (air horn, alarm, siren, distorted square wave,
 sad trombone) and fake cues (footsteps, drone, defuser, breach, gunfire, reinforcement, glass). They're all original, not game audio.
 You can upload your own clips, play them in any call or follow a specific person into theirs, set the volume up to 1000% (it clips and distorts
-past 100%), import sounds by pasting links (e.g. a MyInstants search page grabs every sound on it, downloaded to your server only), make the robot voice (espeak-ng) say anything in someone's call, or use `,,tts @user <text>`, `,,blast @user`, `,,ambush @user` and `,,sound @user air_horn 3` in chat.
+past 100%), import sounds by pasting links (e.g. a MyInstants search page grabs every sound on it, downloaded to your server only), make the robot voice (espeak-ng) say anything in someone's call, or use `..tts @user <text>`, `..blast @user`, `..ambush @user` and `..sound @user air_horn 3` in chat.
 
 ## 🧬 Opt-in voice clones
 Friends who *want* to be cloned run `/voiceclone optin`, choose who may use their voice (bot owners only, or everyone), and upload
 10–30 s of **their own** voice with `/voiceclone sample` (a Discord voice message works). After that, `/mimic @friend <text>`,
-`,,clone @friend <text>` or the Soundboard page make their AI voice say anything in a call. `/voiceclone optout` deletes the sample instantly.
+`..clone @friend <text>` or the Soundboard page make their AI voice say anything in a call. `/voiceclone optout` deletes the sample instantly.
 Friends too lazy to upload? Upload their clip in the panel (Soundboard → Voice clones). The bot DMs them the clip with
 **Allow** / **Delete** buttons, and their clone activates the moment they tap Allow. Unapproved samples are deleted after 7 days.
 

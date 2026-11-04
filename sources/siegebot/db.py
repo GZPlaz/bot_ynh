@@ -38,6 +38,9 @@ CREATE TABLE IF NOT EXISTS tier_requests (
     requester_id INTEGER, requester_name TEXT, from_tier INTEGER, to_tier INTEGER, reason TEXT,
     status TEXT NOT NULL DEFAULT 'pending', ts REAL, reviewer TEXT, review_note TEXT, review_ts REAL,
     channel_id INTEGER, message_id INTEGER);
+CREATE TABLE IF NOT EXISTS positions (
+    guild_id INTEGER, user_id INTEGER, user_name TEXT, roles TEXT NOT NULL DEFAULT '[]', updated_ts REAL,
+    PRIMARY KEY(guild_id, user_id));
 CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, kind TEXT, message TEXT);
 """
 
@@ -92,6 +95,31 @@ class DB:
         self.q("INSERT INTO cases(guild_id,user_id,user_name,mod_name,action,reason,ts,duration) VALUES(?,?,?,?,?,?,?,?)",
                (guild_id, user.id, str(user), str(moderator), action, reason, time.time(), duration))
         return self.q("SELECT MAX(id) id FROM cases", one=True)["id"]
+
+    # ---- player positions (team roles) ----
+    def position_names(self):
+        return [p.strip() for p in self.get("position_names") or [] if p.strip()]
+
+    def get_positions(self, guild_id, user_id):
+        """Stored positions that still exist in the configured list, in list order."""
+        r = self.q("SELECT roles FROM positions WHERE guild_id=? AND user_id=?", (guild_id, user_id), one=True)
+        have = set(json.loads(r["roles"])) if r else set()
+        return [p for p in self.position_names() if p in have]
+
+    def set_positions(self, guild_id, user_id, user_name, roles):
+        valid = self.position_names()
+        roles = [p for p in valid if p in set(roles)][:max(1, int(self.get("max_positions") or 3))]
+        if roles:
+            self.q("""INSERT INTO positions(guild_id,user_id,user_name,roles,updated_ts) VALUES(?,?,?,?,?)
+                      ON CONFLICT(guild_id,user_id) DO UPDATE SET roles=excluded.roles, user_name=excluded.user_name,
+                      updated_ts=excluded.updated_ts""", (guild_id, user_id, user_name, json.dumps(roles), time.time()))
+        else:
+            self.q("DELETE FROM positions WHERE guild_id=? AND user_id=?", (guild_id, user_id))
+        return roles
+
+    def all_positions(self, guild_id):
+        return {r["user_id"]: self.get_positions(guild_id, r["user_id"])
+                for r in self.q("SELECT user_id FROM positions WHERE guild_id=?", (guild_id,))}
 
     # ---- targets ----
     def targets(self):

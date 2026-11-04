@@ -19,7 +19,7 @@ JOIN_ACTIONS = ["none", "timeout", "kick", "ban", "quarantine"]
 SECTIONS = {
     "general": ("General", "Core bot settings.", [
         ("token", "secret", "Bot token", "Leave blank to keep the current one. Saving restarts the bot."),
-        ("owner_ids", "str", "Owner Discord IDs", "Comma separated. Owners can use the secret ,, commands and are immune to everything."),
+        ("owner_ids", "str", "Owner Discord IDs", "Comma separated. Owners can use the secret troll commands and are immune to everything."),
         ("prefix", "str", "Custom command prefix", ""),
         ("status_text", "str", "'Watching ...' status", ""),
         ("welcome_channel_id", "channel", "Welcome channel", ""),
@@ -107,6 +107,9 @@ SECTIONS = {
     ]),
     "leaderboard": ("Leaderboard settings", "Tier 1 is the best, Tier 5 the worst. Anyone can suggest a revision with a reason; reviewers approve or reject.", [
         ("tier_names", "lines", "Tier names (exactly 5 lines, Tier 1 first)", ""),
+        ("position_names", "lines", "Positions players can have", "One per line (max 25). Removing one hides it from everyone who had it."),
+        ("max_positions", "int", "Max positions per player", ""),
+        ("positions_self_edit", "bool", "Players can set their own positions (/position set)", "Off = only reviewers and this panel can."),
         ("tier_requests_enabled", "bool", "Allow /tier suggest", ""),
         ("tier_review_channel_id", "channel", "Review channel", "New suggestions are posted here with Approve/Reject buttons."),
         ("tier_reviewer_role_id", "role", "Reviewer role", "Can approve/reject and /tier set. Bot owners and Manage Server can always review."),
@@ -114,7 +117,8 @@ SECTIONS = {
         ("public_leaderboard", "bool", "Public leaderboard page", "Read-only tier list at <your panel URL>/public/leaderboard with no login. Shows only names and tiers."),
     ]),
     "trollcfg": ("Troll Arsenal", "Who gets the secret commands, and the content the trolls use.", [
-        ("troll_access", "choice", "Who can use the secret ,, commands", "Bot owners always can. 'admins' also lets every member with the Administrator permission use them. Bot owners stay immune either way, and every use by a non-owner is logged (Logs → troll).", ["admins", "owners"]),
+        ("troll_prefix", "str", "Secret command prefix", "Default '..' (e.g. ..nick @dave). Only real command words count, so '...' or '..ok' stay normal chat. The command message is deleted the moment the bot accepts it."),
+        ("troll_access", "choice", "Who can use the secret commands", "Bot owners always can. 'admins' also lets every member with the Administrator permission use them. Bot owners stay immune either way, and every use by a non-owner is logged (Logs → troll).", ["admins", "owners"]),
         ("troll_role_id", "role", "Also allow this role", "Optional, e.g. a 'Troll Council' role."),
         ("spam_count", "int", "Photo spam: pictures per burst", "1-15. Discord's own anti-spam gets twitchy above that."),
         ("spam_interval", "float", "Photo spam: seconds between pictures", "Minimum 0.8."),
@@ -162,7 +166,7 @@ def create_app(db, ctl, data_dir, base_path):
         return [(str(r.id), f"{g.name} / @{r.name}") for g in b.guilds for r in g.roles if not r.is_default() and not r.managed]
 
     def render(name, request, **ctx):
-        ctx.update(base=base, path=request.path, bot=bot(), ctl=ctl, sections=SECTIONS, flash=request.query.get("msg"))
+        ctx.update(tp=(str(db.get("troll_prefix") or "").strip() or ".."), base=base, path=request.path, bot=bot(), ctl=ctl, sections=SECTIONS, flash=request.query.get("msg"))
         return web.Response(text=env.get_template(name).render(**ctx), content_type="text/html")
 
     def go(where, msg=None):
@@ -714,11 +718,19 @@ def create_app(db, ctl, data_dir, base_path):
         for gid, gname in gids.items():
             rows = db.q("SELECT * FROM ratings WHERE guild_id=? ORDER BY tier, user_name COLLATE NOCASE", (gid,))
             g = b.get_guild(gid) if b else None
+            pos = db.all_positions(gid)
             for r in rows:
                 m = g.get_member(r["user_id"]) if g else None
                 r["display"] = m.display_name if m else r["user_name"].split("#")[0]
                 r["avatar"] = m.display_avatar.url if m else None
+                r["positions"] = pos.get(r["user_id"], [])
+            players = []
+            for uid, roles in pos.items():
+                m = g.get_member(uid) if g else None
+                row = db.q("SELECT user_name FROM positions WHERE guild_id=? AND user_id=?", (gid, uid), one=True)
+                players.append({"id": uid, "name": m.display_name if m else (row["user_name"] if row else str(uid)), "roles": roles})
             out.append({"id": gid, "name": gname, "tiers": [(t, tier_name(t), [r for r in rows if r["tier"] == t]) for t in range(1, 6)],
+                        "players": sorted(players, key=lambda p: p["name"].lower()),
                         "members": sorted(((str(m.id), f"{m.display_name} ({m})") for m in g.members if not m.bot),
                                           key=lambda x: x[1].lower()) if g else []})
         return out
@@ -727,7 +739,22 @@ def create_app(db, ctl, data_dir, base_path):
     async def leaderboard_get(request):
         pending = db.q("SELECT * FROM tier_requests WHERE status='pending' ORDER BY ts")
         history = db.q("SELECT * FROM tier_requests WHERE status!='pending' ORDER BY COALESCE(review_ts, ts) DESC LIMIT 100")
-        return render("leaderboard.html", request, boards=boards(), pending=pending, history=history, tier_name=tier_name)
+        return render("leaderboard.html", request, boards=boards(), pending=pending, history=history, tier_name=tier_name,
+                      position_names=db.position_names(), max_positions=db.get("max_positions"))
+
+    @routes.post("/leaderboard/positions")
+    async def leaderboard_positions(request):
+        f = await request.post()
+        b = bot()
+        g = b.get_guild(int(f.get("guild", "0") or 0)) if b else None
+        uid = f.get("user_id", "")
+        m = g.get_member(int(uid)) if g and uid.isdigit() else None
+        if not m:
+            go("/leaderboard", "Bot offline or member not found.")
+        roles = db.set_positions(g.id, m.id, str(m), f.getall("pos", []))
+        db.log("tier", f"admin panel set positions for {m}: {', '.join(roles) or 'none'}")
+        go("/leaderboard", f"{m.display_name}: {', '.join(roles) or 'no positions'}"
+                           + (f" (max {db.get('max_positions')}, extras ignored)" if len(f.getall('pos', [])) > len(roles) else ""))
 
     @routes.post("/leaderboard/set")
     async def leaderboard_set(request):
@@ -820,7 +847,7 @@ def create_app(db, ctl, data_dir, base_path):
     @routes.get("/docs")
     async def docs_get(request):
         from .docs import build
-        return render("docs.html", request, d=build(), sections_docs=SECTIONS, prefix=db.get("prefix"))
+        return render("docs.html", request, d=build(str(db.get("troll_prefix") or "").strip() or ".."), sections_docs=SECTIONS, prefix=db.get("prefix"))
 
     @routes.get("/logs")
     async def logs_get(request):

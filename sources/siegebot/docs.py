@@ -10,20 +10,20 @@ PERM_NAMES = {"moderate_members": "Timeout Members", "manage_messages": "Manage 
               "administrator": "Administrator"}
 
 HIDDEN_EXTRA = [
-    (",,sound @user <name> [times]", "Play a soundboard sound in their call N times (max 10). Without @user it plays in your call. "
+    ("{P}sound @user <name> [times]", "Play a soundboard sound in their call N times (max 10). Without @user it plays in your call. "
                                       "Name can be 'loud' or 'cue' for a random one."),
-    (",,tts @user <text>", "Robot voice says anything in their call."),
-    (",,clone @user <text>", "That person's opted-in voice clone says something in your call (or theirs if you're not in voice)."),
-    (",,spam @user [count]", "Photo spam in this channel, pinging them on the first picture (max 15)."),
-    (",,unpin", "Unpin every message pinned by the pin_shame troll."),
-    (",,stop", "Stop any sound and make the bot leave voice."),
-    (",,sounds", "DMs you the list of sound names."),
-    (",,target @user", "Add them as a target with every troll enabled."),
-    (",,untarget @user", "Release them (restores their nickname)."),
-    (",,chaos <0-5>", "Set the chaos multiplier."),
-    (",,on / ,,off", "Turn the troll engine on or off."),
-    (",,panic", "Emergency: turn everything off and undo nicknames, shame roles, timeouts and potato channels."),
-    (",,help", "DMs you the full secret command list."),
+    ("{P}tts @user <text>", "Robot voice says anything in their call."),
+    ("{P}clone @user <text>", "That person's opted-in voice clone says something in your call (or theirs if you're not in voice)."),
+    ("{P}spam @user [count]", "Photo spam in this channel, pinging them on the first picture (max 15)."),
+    ("{P}unpin", "Unpin every message pinned by the pin_shame troll."),
+    ("{P}stop", "Stop any sound and make the bot leave voice."),
+    ("{P}sounds", "DMs you the list of sound names."),
+    ("{P}target @user", "Add them as a target with every troll enabled."),
+    ("{P}untarget @user", "Release them (restores their nickname)."),
+    ("{P}chaos <0-5>", "Set the chaos multiplier."),
+    ("{P}on / {P}off", "Turn the troll engine on or off."),
+    ("{P}panic", "Emergency: turn everything off and undo nicknames, shame roles, timeouts and potato channels."),
+    ("{P}help", "DMs you the full secret command list."),
 ]
 
 
@@ -41,7 +41,7 @@ def _cmd_rows(cog_cls, category):
     return rows
 
 
-def build():
+def build(prefix=".."):
     from .fun import Fun
     from .leaderboard import Leaderboard
     from .moderation import Moderation
@@ -61,6 +61,7 @@ def build():
             kind = "Timed loop / manual"
         trolls.append({"key": t, "desc": TROLL_DESCRIPTIONS.get(t, ""), "kind": kind, "voice": t in VOICE_ACTIONS
                        or t == "read_aloud"})
-    hidden = [(f",,{k} @user", f"{ACTIONS.get(v, v)}: {TROLL_DESCRIPTIONS.get(v, '')}".rstrip(": ")) for k, v in HIDDEN.items()]
+    hidden = [("{P}" + f"{k} @user", f"{ACTIONS.get(v, v)}: {TROLL_DESCRIPTIONS.get(v, '')}".rstrip(": ")) for k, v in HIDDEN.items()]
     hidden += HIDDEN_EXTRA
+    hidden = [(c.replace("{P}", prefix), d.replace("{P}", prefix)) for c, d in hidden]
     return {"commands": commands, "trolls": trolls, "hidden": hidden, "builtin_sounds": sounds.BUILTIN}

@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% block body %}
 <h1>📸 Photo Spam</h1>
-<p class="muted">Ammunition for the <code>photo_spam</code> troll and <code>,,spam @user [count]</code>. The bot posts {{ count }} pictures in a row
+<p class="muted">Ammunition for the <code>photo_spam</code> troll and <code>{{ tp }}spam @user [count]</code>. The bot posts {{ count }} pictures in a row
 (pinging the victim on the first one) in the channel where they last talked{% if delete_after %}, then deletes them after {{ delete_after }}s{% endif %}.
 With no uploads and no links, it spams the victim's own profile picture. Burst size, speed, auto-delete and links are in
 <a href="{{ base }}/settings/trollcfg">Troll Arsenal</a>.</p>

@@ -275,7 +275,8 @@ DEFAULTS = {
     "sound_max_seconds": 20,
     # trolls
     "trolls_enabled": True,
-    "troll_access": "admins",   # who can use the secret ,, commands besides bot owners: "owners" or "admins"
+    "troll_prefix": "..",       # secret troll commands look like ..nick @user
+    "troll_access": "admins",   # who can use the secret commands besides bot owners: "owners" or "admins"
     "troll_role_id": "",        # optional extra role that may use them
     "chaos": 1.0,
     "troll_loop_minutes": 15,
@@ -296,6 +297,9 @@ DEFAULTS = {
     "announcer_lines": ANNOUNCER_LINES,
     # leaderboard
     "tier_names": ["Siege Gods", "Cracked", "Solid", "Hit or Miss", "Bot Frag"],
+    "position_names": ["Entry Fragger", "Hard Breacher", "Support", "Flex", "Intel", "IGL", "Anchor", "Roamer"],
+    "max_positions": 3,
+    "positions_self_edit": True,
     "tier_requests_enabled": True,
     "tier_review_channel_id": "",
     "tier_reviewer_role_id": "",

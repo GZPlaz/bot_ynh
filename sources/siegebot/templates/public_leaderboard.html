@@ -9,14 +9,15 @@ main{max-width:900px;margin:0 auto;padding:28px 16px}h1{margin:0 0 4px}.muted{co
 .label{width:150px;flex-shrink:0;padding:14px;font-weight:800;color:#111;display:flex;flex-direction:column;justify-content:center}
 .label small{font-weight:600;opacity:.8}.players{padding:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .p{display:flex;align-items:center;gap:6px;background:#232835;border-radius:99px;padding:3px 10px 3px 3px}
+.p small{color:var(--muted);font-size:12px;margin-left:2px}
 .p img,.p span.ph{width:26px;height:26px;border-radius:50%;background:#2a2f3a;display:inline-block}
 .t1{background:#ff7a7a}.t2{background:#ffb36b}.t3{background:#ffe07a}.t4{background:#9be59b}.t5{background:#8fb8ff}
 @media(max-width:560px){.tier{flex-direction:column}.label{width:auto}}
 </style></head>
 <body><main>
 {% for g in boards %}
-<h1>🏅 {{ g.name }}</h1><p class="muted">Tier 1 = best · Tier 5 = worst · Think someone's misranked? Use <b>/tier suggest</b> in Discord.</p>
+<h1>🏅 {{ g.name }}</h1><p class="muted">Tier 1 = best · Tier 5 = worst · Think someone's misranked? Use <b>/tier suggest</b> in Discord. Set your positions with <b>/position set</b>.</p>
 {% for t, name, rows in g.tiers %}<div class="tier"><div class="label t{{ t }}">{{ name.split(':')[0] }}<small>{{ name.split(': ',1)[1] if ': ' in name else '' }}</small></div>
-<div class="players">{% for r in rows %}<span class="p">{% if r.avatar %}<img src="{{ r.avatar }}" alt="" loading="lazy">{% else %}<span class="ph"></span>{% endif %}{{ r.display }}</span>{% else %}<span class="muted">nobody yet</span>{% endfor %}</div></div>{% endfor %}
+<div class="players">{% for r in rows %}<span class="p">{% if r.avatar %}<img src="{{ r.avatar }}" alt="" loading="lazy">{% else %}<span class="ph"></span>{% endif %}{{ r.display }}{% if r.positions %}<small>{{ r.positions|join(' · ') }}</small>{% endif %}</span>{% else %}<span class="muted">nobody yet</span>{% endfor %}</div></div>{% endfor %}
 {% else %}<h1>Tier List</h1><p class="muted">Nothing ranked yet.</p>{% endfor %}
 </main></body></html>
