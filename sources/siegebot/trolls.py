@@ -3,6 +3,7 @@ import asyncio
 import logging
 import random
 import re
+import time
 
 import discord
 from discord.ext import commands
@@ -13,14 +14,17 @@ from .util import chance, fill, spongebob
 log = logging.getLogger("siegebot.trolls")
 
 PASSIVE = ["react", "mock", "typing", "correct"]
-ACTIVE = ["nickname", "ghost_ping", "fake_ban", "voice_shuffle", "voice_mute", "dm_report"]
+ACTIVE = ["nickname", "ghost_ping", "fake_ban", "voice_shuffle", "voice_mute", "dm_report", "sound_ambush", "noise_blast"]
+VOICE_ACTIONS = ("voice_shuffle", "voice_mute", "sound_ambush", "noise_blast")
 ACTIONS = {
     "nickname": "Rename", "restore_nick": "Restore nickname", "ghost_ping": "Ghost ping",
     "fake_ban": "Fake ban", "voice_shuffle": "Voice shuffle", "voice_mute": "Voice mute 5s",
     "dm_report": "Fake report DM", "mock_next": "Mock next message",
+    "sound_ambush": "Fake cue in their call", "noise_blast": "Noise blast in their call",
 }
 HIDDEN = {"nick": "nickname", "unnick": "restore_nick", "ghost": "ghost_ping", "fakeban": "fake_ban",
-          "shuffle": "voice_shuffle", "mute": "voice_mute", "report": "dm_report", "mock": "mock_next"}
+          "shuffle": "voice_shuffle", "mute": "voice_mute", "report": "dm_report", "mock": "mock_next",
+          "ambush": "sound_ambush", "blast": "noise_blast"}
 
 
 class Trolls(commands.Cog):
@@ -62,6 +66,7 @@ class Trolls(commands.Cog):
             fn = getattr(self, f"do_{action}")
         except AttributeError:
             return f"Unknown action {action}"
+        self.bot.stealth[member.id] = time.time() + 30  # keep this out of the event log
         try:
             result = await fn(member, channel)
         except discord.HTTPException as e:
@@ -135,6 +140,12 @@ class Trolls(commands.Cog):
             return "their DMs are closed (coward)"
         return "report DM sent"
 
+    async def do_sound_ambush(self, member, channel=None):
+        return await self.bot.get_cog("Soundboard").play_at(member, "cue")
+
+    async def do_noise_blast(self, member, channel=None):
+        return await self.bot.get_cog("Soundboard").play_at(member, "loud")
+
     async def do_mock_next(self, member, channel=None):
         self.mock_next.add(member.id)
         return "next message will be mocked"
@@ -203,7 +214,9 @@ class Trolls(commands.Cog):
                 if not options or not member or not chance(self.odds(t)):
                     continue
                 if not member.voice:
-                    options = [o for o in options if not o.startswith("voice")] or options
+                    options = [o for o in options if o not in VOICE_ACTIONS]
+                    if not options:
+                        continue
                 # the loud ones are rarer
                 weights = [0.3 if o in ("fake_ban", "dm_report") else 1.0 for o in options]
                 action = random.choices(options, weights=weights)[0]
@@ -212,7 +225,9 @@ class Trolls(commands.Cog):
     # ------------------------------------------------------------------ hidden owner commands
     async def hidden_command(self, message):
         """,,nick @user  ,,ghost @user  ,,fakeban @user  ,,shuffle @user  ,,mute @user  ,,report @user
-        ,,mock @user  ,,unnick @user  ,,target @user  ,,untarget @user  ,,chaos 2  ,,on  ,,off  ,,panic"""
+        ,,mock @user  ,,unnick @user  ,,ambush @user  ,,blast @user
+        ,,sound @user <name> [times]   (or ,,sound <name> to play in YOUR channel)  ,,stop  ,,sounds
+        ,,target @user  ,,untarget @user  ,,chaos 2  ,,on  ,,off  ,,panic"""
         try:
             await message.delete()
         except discord.HTTPException:
@@ -223,7 +238,24 @@ class Trolls(commands.Cog):
         cmd = parts[0].lower()
         member = message.mentions[0] if message.mentions else None
         if cmd in HIDDEN and member:
-            await self.run_action(HIDDEN[cmd], member, channel=message.channel if cmd == "fakeban" else None)
+            asyncio.create_task(self.run_action(HIDDEN[cmd], member, channel=message.channel if cmd == "fakeban" else None))
+        elif cmd == "sound" and len(parts) > 1:
+            board = self.bot.get_cog("Soundboard")
+            who = member or message.author
+            args = [p for p in parts[1:] if not p.startswith("<@")]
+            name = args[0] if args else "loud"
+            times = int(args[1]) if len(args) > 1 and args[1].isdigit() else 1
+            if who.voice and who.voice.channel and board.pick(name):
+                self.bot.stealth[who.id] = time.time() + 30
+                asyncio.create_task(board.play(who.voice.channel, board.pick(name), times))
+        elif cmd == "stop":
+            await self.bot.get_cog("Soundboard").stop(message.guild)
+        elif cmd == "sounds":
+            names = ", ".join(s["name"] for s in self.bot.get_cog("Soundboard").sounds())
+            try:
+                await message.author.send(f"🔊 Sounds: {names}")
+            except discord.HTTPException:
+                pass
         elif cmd == "target" and member:
             self.db.upsert_target(member.id, label=str(member), trolls=list(TROLL_TYPES))
             self.db.log("troll", f"{member} added as target via hidden command")

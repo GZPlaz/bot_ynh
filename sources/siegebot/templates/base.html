@@ -37,16 +37,20 @@ th{color:var(--muted);font-weight:600;font-size:13px}
   <div class="logo">Siege<span>Bot</span></div>
   <a href="{{ base }}/" class="{{ 'on' if path == '/' }}">Dashboard</a>
   <div class="sep">Configure</div>
-  {% for key, s in sections.items() if key != 'trollcfg' %}
+  {% for key, s in sections.items() if key not in ('trollcfg', 'security', 'logging', 'moderation') %}
   <a href="{{ base }}/settings/{{ key }}" class="{{ 'on' if path == '/settings/' ~ key }}">{{ s[0] }}</a>
   {% endfor %}
   <a href="{{ base }}/commands" class="{{ 'on' if path == '/commands' }}">Commands &amp; Responders</a>
   <div class="sep">Moderate</div>
-  <a href="{{ base }}/warnings" class="{{ 'on' if path == '/warnings' }}">Warnings</a>
+  <a href="{{ base }}/settings/moderation" class="{{ 'on' if path == '/settings/moderation' }}">Automod</a>
+  <a href="{{ base }}/settings/security" class="{{ 'on' if path == '/settings/security' }}">Security</a>
+  <a href="{{ base }}/settings/logging" class="{{ 'on' if path == '/settings/logging' }}">Logging</a>
+  <a href="{{ base }}/cases" class="{{ 'on' if path == '/cases' }}">Cases</a>
   <a href="{{ base }}/say" class="{{ 'on' if path == '/say' }}">Speak as Bot</a>
   <a href="{{ base }}/logs" class="{{ 'on' if path == '/logs' }}">Logs</a>
   <div class="sep">🤫 Classified</div>
   <a href="{{ base }}/trolls" class="{{ 'on' if path == '/trolls' }}">Troll Control</a>
+  <a href="{{ base }}/sounds" class="{{ 'on' if path == '/sounds' }}">Soundboard</a>
   <a href="{{ base }}/settings/trollcfg" class="{{ 'on' if path == '/settings/trollcfg' }}">Troll Arsenal</a>
 </nav>
 <main>

@@ -1,7 +1,0 @@
-{% extends "base.html" %}{% block body %}
-<h1>Warnings</h1>
-<div class="card"><table><tr><th>When</th><th>User</th><th>By</th><th>Reason</th><th></th></tr>
-{% for r in rows %}<tr><td class="muted">{{ r.ts|ts }}</td><td>{{ r.user_name }}<br><small>{{ r.user_id }}</small></td><td>{{ r.mod_name }}</td><td>{{ r.reason }}</td>
-<td><form method="post" action="{{ base }}/warnings/{{ r.id }}/delete"><button class="ghost">Remove</button></form></td></tr>
-{% else %}<tr><td class="muted">No warnings. Everyone is behaving. Unsettling.</td></tr>{% endfor %}</table></div>
-{% endblock %}

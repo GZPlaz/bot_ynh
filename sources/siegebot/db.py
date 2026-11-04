@@ -20,6 +20,12 @@ CREATE TABLE IF NOT EXISTS warnings (
 CREATE TABLE IF NOT EXISTS targets (
     user_id INTEGER PRIMARY KEY, label TEXT, trolls TEXT NOT NULL DEFAULT '[]',
     chance REAL NOT NULL DEFAULT 0.15, original_nick TEXT, nick_changed INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS cases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER, user_id INTEGER, user_name TEXT, mod_name TEXT,
+    action TEXT NOT NULL, reason TEXT, ts REAL, duration INTEGER);
+CREATE TABLE IF NOT EXISTS tempbans (guild_id INTEGER, user_id INTEGER, until REAL, PRIMARY KEY(guild_id, user_id));
+CREATE TABLE IF NOT EXISTS quarantined (
+    guild_id INTEGER, user_id INTEGER, roles TEXT NOT NULL DEFAULT '[]', ts REAL, PRIMARY KEY(guild_id, user_id));
 CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, kind TEXT, message TEXT);
 """
 
@@ -32,6 +38,11 @@ class DB:
         self.lock = threading.Lock()
         with self.lock:
             self.conn.executescript(_SCHEMA)
+            # v1 -> v2: warnings became cases
+            if not self.conn.execute("SELECT 1 FROM cases LIMIT 1").fetchone():
+                self.conn.execute("""INSERT INTO cases(guild_id,user_id,user_name,mod_name,action,reason,ts)
+                                     SELECT guild_id,user_id,user_name,mod_name,'warn',reason,ts FROM warnings""")
+                self.conn.execute("DELETE FROM warnings")
             self.conn.commit()
 
     def q(self, sql, args=(), one=False):
@@ -63,6 +74,12 @@ class DB:
     def log(self, kind, message):
         self.q("INSERT INTO logs(ts,kind,message) VALUES(?,?,?)", (time.time(), kind, str(message)[:1000]))
         self.q("DELETE FROM logs WHERE id < (SELECT MAX(id) FROM logs) - 2000")
+
+    # ---- cases ----
+    def add_case(self, guild_id, user, moderator, action, reason, duration=None):
+        self.q("INSERT INTO cases(guild_id,user_id,user_name,mod_name,action,reason,ts,duration) VALUES(?,?,?,?,?,?,?,?)",
+               (guild_id, user.id, str(user), str(moderator), action, reason, time.time(), duration))
+        return self.q("SELECT MAX(id) id FROM cases", one=True)["id"]
 
     # ---- targets ----
     def targets(self):

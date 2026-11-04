@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% block body %}
+<h1>🔊 Soundboard</h1>
+<p class="muted">The bot joins the call, plays the sound, and leaves before anyone can react. Sounds starting with <code>fake_</code> are sneaky fake game cues; the rest are pure noise.</p>
+<form method="post" action="{{ base }}/sounds/play" class="card">
+  <div class="row">
+    <select name="sound" style="width:auto">
+      <option value="loud">🎲 random loud noise</option><option value="cue">🎲 random fake cue</option>
+      {% for s in sounds %}<option value="{{ s.name }}">{{ s.name }}</option>{% endfor %}</select>
+    <select name="target" style="width:auto">
+      {% for id, name in members %}<option value="m:{{ id }}">🎯 {{ name }}</option>{% endfor %}
+      {% for id, name in vchans %}<option value="c:{{ id }}">{{ name }}</option>{% endfor %}
+      {% if not members and not vchans %}<option value="">bot offline / no voice channels</option>{% endif %}
+    </select>
+    <span>× <input type="number" name="times" value="1" min="1" max="10" style="width:70px"></span>
+    <button>Play 🔊</button>
+  </div>
+  <small>Targeting a member follows them into whatever channel they're in.</small>
+</form>
+<div class="row">
+<form method="post" action="{{ base }}/sounds/stop"><button class="bad">⏹ Stop &amp; leave voice</button></form>
+</div>
+<form method="post" action="{{ base }}/sounds/config" class="card row">
+  <span>Volume <input type="number" name="volume" value="{{ volume }}" min="0" max="1000" style="width:90px">%</span>
+  <span>Max length <input type="number" name="max_seconds" value="{{ max_seconds }}" min="1" max="120" style="width:80px">s</span>
+  <button>Save</button>
+  <small style="width:100%">Above 100% the audio clips and distorts (that's the obnoxious part). Discord still caps the final loudness, but please don't blow out headphones at 1000%.</small>
+</form>
+<div class="card">
+  <h3 style="margin-top:0">Library</h3>
+  <table>{% for s in sounds %}<tr><td><b>{{ s.name }}</b><br><small>{{ s.description }}</small></td>
+  <td><audio controls preload="none" src="{{ base }}/sounds/file/{{ s.name }}"></audio></td>
+  <td>{% if not s.builtin %}<form method="post" action="{{ base }}/sounds/{{ s.name }}/delete"><button class="ghost">Delete</button></form>{% else %}<span class="pill">built-in</span>{% endif %}</td></tr>{% endfor %}</table>
+</div>
+<form method="post" action="{{ base }}/sounds/upload" enctype="multipart/form-data" class="card">
+  <h3 style="margin-top:0">Upload your own</h3>
+  <div class="row"><input type="text" name="name" placeholder="name (optional)" style="max-width:220px">
+  <input type="file" name="file" accept="audio/*" required><button>Upload</button></div>
+  <small>mp3/wav/ogg/opus/m4a/flac/webm, max 8 MB. Record your own fake callouts ("he's one shot!") for maximum chaos.</small>
+</form>
+{% endblock %}

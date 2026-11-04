@@ -1,5 +1,6 @@
 """Admin panel. Sits behind YunoHost SSO (nginx); only listens on 127.0.0.1."""
 import os
+import re
 import time
 from datetime import datetime
 from urllib.parse import quote, urlparse
@@ -8,10 +9,12 @@ import discord
 from aiohttp import web
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from . import sounds as sound_lib
 from .defaults import TROLL_DESCRIPTIONS, TROLL_TYPES
 from .trolls import ACTIONS
 
-# section -> (title, intro, [(key, type, label, help)])
+# section -> (title, intro, [(key, type, label, help[, choices])])
+JOIN_ACTIONS = ["none", "timeout", "kick", "ban", "quarantine"]
 SECTIONS = {
     "general": ("General", "Core bot settings.", [
         ("token", "secret", "Bot token", "Leave blank to keep the current one. Saving restarts the bot."),
@@ -21,19 +24,66 @@ SECTIONS = {
         ("welcome_channel_id", "channel", "Welcome channel", ""),
         ("welcome_message", "str", "Welcome message", "Placeholders: {mention} {user} {server}"),
     ]),
-    "moderation": ("Moderation", "Automod. Members with Manage Messages, owners and exempt roles are skipped.", [
+    "moderation": ("Automod", "Message filtering. Members with Manage Messages, owners, the server owner and whitelisted users/roles are skipped.", [
         ("mod_enabled", "bool", "Automod enabled", ""),
-        ("log_channel_id", "channel", "Mod log channel", ""),
+        ("log_channel_id", "channel", "Mod log channel", "Punishments, cases and security alerts go here."),
         ("banned_words", "lines", "Banned words", "One per line, whole-word match."),
         ("filter_invites", "bool", "Delete Discord invite links", ""),
-        ("anti_spam", "bool", "Anti-spam", ""),
-        ("spam_messages", "int", "Spam: messages...", ""),
-        ("spam_seconds", "float", "...within seconds", ""),
+        ("mass_mention_limit", "int", "Mass mention limit", "Delete + warn when a message pings this many users/roles. 0 = off."),
+        ("link_filter", "bool", "Only allow links from the allowlist", ""),
+        ("link_allowlist", "lines", "Allowed link domains", "Subdomains included."),
         ("filter_caps", "bool", "Delete ALL CAPS messages", ""),
         ("caps_min_length", "int", "Caps filter minimum letters", ""),
         ("max_warnings", "int", "Warnings before auto-timeout", "0 disables auto-timeout."),
-        ("timeout_minutes", "int", "Auto-timeout length (minutes)", ""),
+        ("timeout_minutes", "int", "Base timeout length (minutes)", "Repeat spam offenders get this × strike count."),
         ("exempt_role_ids", "lines", "Exempt role IDs", "One per line."),
+        ("heat_enabled", "bool", "🔥 Heat anti-spam", "Every message adds heat; heat cools over time. Hitting the limit nukes their recent messages and punishes."),
+        ("heat_threshold", "int", "Heat limit", ""),
+        ("heat_decay", "float", "Heat cooldown per second", ""),
+        ("heat_action", "choice", "Punishment at heat limit", "", ["warn", "timeout", "kick", "ban", "quarantine"]),
+        ("heat_message", "float", "Heat: per message", ""),
+        ("heat_mention", "float", "Heat: per mention", ""),
+        ("heat_link", "float", "Heat: per link", ""),
+        ("heat_attachment", "float", "Heat: per attachment", ""),
+        ("heat_emoji", "float", "Heat: per emoji", ""),
+        ("heat_newline", "float", "Heat: per line break", ""),
+        ("heat_duplicate", "float", "Heat: repeated message", ""),
+    ]),
+    "security": ("Security", "Anti-nuke, anti-raid and verification. Give the bot Administrator (or View Audit Log + Manage Roles/Channels + Ban/Kick) and put its role near the top.", [
+        ("whitelist_ids", "lines", "Trusted user/role IDs (whitelist)", "Bypass anti-nuke and automod. Bot owners and the server owner are always trusted."),
+        ("antinuke_enabled", "bool", "🛡️ Anti-nuke", "Punishes untrusted staff/bots that mass-delete channels/roles, mass-ban/kick or spam webhooks."),
+        ("antinuke_window", "int", "Anti-nuke window (seconds)", ""),
+        ("nuke_channel_delete", "int", "Limit: channel deletions", ""),
+        ("nuke_channel_create", "int", "Limit: channel creations", ""),
+        ("nuke_role_delete", "int", "Limit: role deletions", ""),
+        ("nuke_role_create", "int", "Limit: role creations", ""),
+        ("nuke_ban", "int", "Limit: bans", ""),
+        ("nuke_kick", "int", "Limit: kicks", ""),
+        ("nuke_webhook", "int", "Limit: webhook creations", ""),
+        ("antinuke_punishment", "choice", "Anti-nuke punishment", "", ["quarantine", "strip", "kick", "ban"]),
+        ("antinuke_restore", "bool", "Auto-revert nukes", "Re-creates deleted channels/roles, deletes spam channels/roles, unbans mass-banned users."),
+        ("antibot_add", "bool", "Kick bots added by untrusted members", ""),
+        ("protect_dangerous_perms", "bool", "Block dangerous permission grants", "Reverts Admin/Ban/Manage perms given to roles or members by untrusted users."),
+        ("antiraid_enabled", "bool", "🚨 Anti-raid", "Detects join floods and turns on raid mode."),
+        ("raid_joins", "int", "Raid: joins...", ""),
+        ("raid_seconds", "int", "...within seconds", ""),
+        ("raid_action", "choice", "Action on joins during raid mode", "", JOIN_ACTIONS),
+        ("raid_duration_minutes", "int", "Raid mode lasts (minutes)", ""),
+        ("raid_auto_lockdown", "bool", "Lock all channels when a raid is detected", ""),
+        ("min_account_age_days", "int", "Minimum account age (days)", "0 = off."),
+        ("young_account_action", "choice", "Action for too-young accounts", "", JOIN_ACTIONS),
+        ("no_avatar_action", "choice", "Action for accounts with no avatar", "", JOIN_ACTIONS),
+        ("verify_enabled", "bool", "✅ Verification gate", "Run /verifypanel in a channel to post the captcha button."),
+        ("verified_role_id", "role", "Verified role", "Make @everyone unable to see channels and give this role access."),
+    ]),
+    "logging": ("Logging", "Server event logs (like an audit trail you can actually read). Troll activity is automatically kept out.", [
+        ("event_log_channel_id", "channel", "Event log channel", ""),
+        ("log_messages", "bool", "Message edits & deletions", ""),
+        ("log_members", "bool", "Joins, leaves, bans, nicknames, timeouts", ""),
+        ("log_roles", "bool", "Role changes", ""),
+        ("log_voice", "bool", "Voice joins/leaves/moves", ""),
+        ("log_server", "bool", "Channel create/delete", ""),
+        ("ghost_ping_detector", "bool", "👻 Ghost ping detector", "Calls people out for deleting a message that pinged someone."),
     ]),
     "personality": ("Personality", "What the bot says. Placeholders: {user} {mention} {server} {target} {op}.", [
         ("sass_enabled", "bool", "Sarcastic replies when pinged/replied to", ""),
@@ -54,9 +104,11 @@ SECTIONS = {
         ("corrections", "dict", "Autocorrect replacements", "word = replacement, one per line."),
     ]),
 }
+SECTIONS = {k: (t, i, [dict(zip(("key", "typ", "label", "help", "choices"), f + (None,) * (5 - len(f)))) for f in fs])
+            for k, (t, i, fs) in SECTIONS.items()}
 
 
-def create_app(db, ctl, base_path):
+def create_app(db, ctl, data_dir, base_path):
     base = "/" + base_path.strip("/") if base_path.strip("/") else ""
     env = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "templates")),
                       autoescape=select_autoescape())
@@ -71,6 +123,12 @@ def create_app(db, ctl, base_path):
         if not b:
             return []
         return [(str(c.id), f"{g.name} / #{c.name}") for g in b.guilds for c in g.text_channels]
+
+    def roles():
+        b = bot()
+        if not b:
+            return []
+        return [(str(r.id), f"{g.name} / @{r.name}") for g in b.guilds for r in g.roles if not r.is_default() and not r.managed]
 
     def render(name, request, **ctx):
         ctx.update(base=base, path=request.path, bot=bot(), ctl=ctl, sections=SECTIONS, flash=request.query.get("msg"))
@@ -94,14 +152,17 @@ def create_app(db, ctl, base_path):
         stats = {
             "commands": db.q("SELECT COUNT(*) c FROM commands", one=True)["c"],
             "responders": db.q("SELECT COUNT(*) c FROM responders", one=True)["c"],
-            "warnings": db.q("SELECT COUNT(*) c FROM warnings", one=True)["c"],
+            "cases": db.q("SELECT COUNT(*) c FROM cases", one=True)["c"],
             "targets": db.q("SELECT COUNT(*) c FROM targets", one=True)["c"],
         }
         b = bot()
         uptime = int(time.time() - b.started_at) if b else 0
+        sec = b.get_cog("Security") if b else None
+        guilds = [{"g": g, "raid": sec.raid_active(g),
+                   "locked": len((db.get("lockdown_state") or {}).get(str(g.id), {}))} for g in (b.guilds if b else [])]
         return render("dashboard.html", request, stats=stats, uptime=uptime,
                       logs=db.q("SELECT * FROM logs ORDER BY id DESC LIMIT 15"),
-                      trolls_enabled=db.get("trolls_enabled"), chaos=db.get("chaos"))
+                      trolls_enabled=db.get("trolls_enabled"), chaos=db.get("chaos"), guilds=guilds)
 
     @routes.post("/bot/{action}")
     async def bot_action(request):
@@ -129,7 +190,7 @@ def create_app(db, ctl, base_path):
         values = db.all_settings()
         values["owner_ids"] = ",".join(str(i) for i in ctl.owner_ids())
         return render("form.html", request, sec=sec, title=title, intro=intro, fields=fields, values=values,
-                      channels=channels())
+                      channels=channels(), roles=roles())
 
     @routes.post("/settings/{section}")
     async def settings_post(request):
@@ -138,7 +199,8 @@ def create_app(db, ctl, base_path):
             raise web.HTTPNotFound()
         form = await request.post()
         restart = False
-        for key, typ, _label, _help in SECTIONS[sec][2]:
+        for f in SECTIONS[sec][2]:
+            key, typ = f["key"], f["typ"]
             raw = form.get(key, "")
             if typ == "bool":
                 val = key in form
@@ -154,6 +216,10 @@ def create_app(db, ctl, base_path):
                     if "=" in line:
                         k, v = line.split("=", 1)
                         val[k.strip()] = v.strip()
+            elif typ == "choice":
+                if raw not in f["choices"]:
+                    continue
+                val = raw
             elif typ == "secret":
                 if not raw.strip():
                     continue
@@ -300,13 +366,151 @@ def create_app(db, ctl, base_path):
 
     # ---------------- warnings & logs
     @routes.get("/warnings")
-    async def warnings_get(request):
-        return render("warnings.html", request, rows=db.q("SELECT * FROM warnings ORDER BY ts DESC LIMIT 300"))
+    async def warnings_redirect(request):
+        go("/cases")
 
-    @routes.post("/warnings/{id}/delete")
-    async def warnings_delete(request):
-        db.q("DELETE FROM warnings WHERE id=?", (int(request.match_info["id"]),))
-        go("/warnings", "Warning removed.")
+    @routes.get("/cases")
+    async def cases_get(request):
+        action, user = request.query.get("action", ""), request.query.get("user", "").strip()
+        sql, args = "SELECT * FROM cases WHERE 1=1", []
+        if action:
+            sql += " AND action=?"
+            args.append(action)
+        if user:
+            sql += " AND (CAST(user_id AS TEXT)=? OR user_name LIKE ?)"
+            args += [user, f"%{user}%"]
+        rows = db.q(sql + " ORDER BY id DESC LIMIT 300", args)
+        actions = [r["action"] for r in db.q("SELECT DISTINCT action FROM cases ORDER BY action")]
+        quarantined = db.q("SELECT * FROM quarantined ORDER BY ts DESC")
+        tempbans = db.q("SELECT * FROM tempbans ORDER BY until")
+        return render("cases.html", request, rows=rows, actions=actions, action=action, user=user,
+                      quarantined=quarantined, tempbans=tempbans)
+
+    @routes.post("/cases/{id}/delete")
+    async def cases_delete(request):
+        db.q("DELETE FROM cases WHERE id=?", (int(request.match_info["id"]),))
+        go("/cases", "Case removed.")
+
+    @routes.post("/quarantine/{gid}/{uid}/release")
+    async def release(request):
+        b = bot()
+        g = b.get_guild(int(request.match_info["gid"])) if b else None
+        m = g.get_member(int(request.match_info["uid"])) if g else None
+        if not m:
+            db.q("DELETE FROM quarantined WHERE guild_id=? AND user_id=?", (request.match_info["gid"], request.match_info["uid"]))
+            go("/cases", "Member not in server any more; record cleared.")
+        try:
+            await b.get_cog("Security").unquarantine(m, "admin panel")
+        except discord.HTTPException as e:
+            go("/cases", f"Discord refused: {e.status}")
+        go("/cases", f"{m} released from quarantine.")
+
+    # ---------------- server protection controls
+    @routes.post("/guild/{gid}/{what}/{state}")
+    async def guild_control(request):
+        b = bot()
+        g = b.get_guild(int(request.match_info["gid"])) if b else None
+        if not g:
+            go("/", "Bot offline or server not found.")
+        sec, on = b.get_cog("Security"), request.match_info["state"] == "on"
+        if request.match_info["what"] == "lockdown":
+            n = await sec.lockdown(g, on)
+            go("/", f"{'Locked' if on else 'Unlocked'} {n} channel(s) in {g.name}.")
+        if request.match_info["what"] == "raid":
+            await sec.set_raid(g, on, "admin panel")
+            go("/", f"Raid mode {'ON' if on else 'off'} for {g.name}.")
+        raise web.HTTPNotFound()
+
+    # ---------------- soundboard
+    @routes.get("/sounds")
+    async def sounds_get(request):
+        b = bot()
+        vchans, members = [], []
+        if b:
+            vchans = [(str(c.id), f"{g.name} / 🔊 {c.name} ({len(c.members)})") for g in b.guilds for c in g.voice_channels]
+            members = [(str(m.id), f"{m.display_name} in 🔊 {m.voice.channel.name}") for g in b.guilds
+                       for m in g.members if m.voice and m.voice.channel and not m.bot]
+        return render("sounds.html", request, sounds=sound_lib.list_sounds(data_dir), vchans=vchans, members=members,
+                      volume=db.get("sound_volume"), max_seconds=db.get("sound_max_seconds"))
+
+    @routes.get("/sounds/file/{name}")
+    async def sounds_file(request):
+        s = sound_lib.find_sound(data_dir, request.match_info["name"])
+        if not s:
+            raise web.HTTPNotFound()
+        return web.FileResponse(s["file"])
+
+    @routes.post("/sounds/config")
+    async def sounds_config(request):
+        f = await request.post()
+        db.set("sound_volume", max(0, min(1000, int(f.get("volume") or 100))))
+        db.set("sound_max_seconds", max(1, min(120, int(f.get("max_seconds") or 20))))
+        go("/sounds", "Saved. Your friends' eardrums have been notified.")
+
+    @routes.post("/sounds/play")
+    async def sounds_play(request):
+        f = await request.post()
+        b = bot()
+        if not b:
+            go("/sounds", "Bot offline.")
+        board = b.get_cog("Soundboard")
+        sound = board.pick(f.get("sound", "loud"))
+        times = int(f.get("times") or 1)
+        target = f.get("target", "")
+        channel = None
+        if target.startswith("m:"):
+            for g in b.guilds:
+                m = g.get_member(int(target[2:]))
+                if m and m.voice:
+                    channel = m.voice.channel
+                    b.stealth[m.id] = time.time() + 30
+        elif target.startswith("c:"):
+            channel = b.get_channel(int(target[2:]))
+        if not channel or not sound:
+            go("/sounds", "Pick a sound and a voice channel/member that's in voice.")
+        b.loop.create_task(board.play(channel, sound, times))
+        go("/sounds", f"🔊 Playing {sound['name']} ×{times} in {channel.name}.")
+
+    @routes.post("/sounds/stop")
+    async def sounds_stop(request):
+        b = bot()
+        for g in (b.guilds if b else []):
+            await b.get_cog("Soundboard").stop(g)
+        go("/sounds", "Silence restored.")
+
+    @routes.post("/sounds/upload")
+    async def sounds_upload(request):
+        reader = await request.multipart()
+        name, saved = None, None
+        async for part in reader:
+            if part.name == "name":
+                name = (await part.text()).strip().lower()
+            elif part.name == "file" and part.filename:
+                ext = os.path.splitext(part.filename)[1].lower()
+                if ext not in sound_lib.AUDIO_EXT:
+                    go("/sounds", "Unsupported file type.")
+                name = re.sub(r"[^a-z0-9_-]", "_", name or os.path.splitext(part.filename)[0].lower())[:40]
+                if not name or name in sound_lib.BUILTIN:
+                    go("/sounds", "Pick a different name (built-in sounds can't be overwritten).")
+                path = os.path.join(sound_lib.sound_dir(data_dir), name + ext)
+                size = 0
+                with open(path, "wb") as fh:
+                    while chunk := await part.read_chunk():
+                        size += len(chunk)
+                        if size > 8 * 1024 * 1024:
+                            fh.close()
+                            os.remove(path)
+                            go("/sounds", "File too big (max 8 MB).")
+                        fh.write(chunk)
+                saved = name
+        go("/sounds", f"Uploaded '{saved}'." if saved else "No file received.")
+
+    @routes.post("/sounds/{name}/delete")
+    async def sounds_delete(request):
+        s = sound_lib.find_sound(data_dir, request.match_info["name"])
+        if s and not s["builtin"]:
+            os.remove(s["file"])
+        go("/sounds", "Deleted." if s and not s["builtin"] else "Built-in sounds can't be deleted.")
 
     @routes.get("/logs")
     async def logs_get(request):
@@ -315,6 +519,6 @@ def create_app(db, ctl, base_path):
                 else db.q("SELECT * FROM logs ORDER BY id DESC LIMIT 300"))
         return render("logs.html", request, rows=rows, kind=kind)
 
-    app = web.Application(middlewares=[csrf])
+    app = web.Application(middlewares=[csrf], client_max_size=10 * 1024 * 1024)
     app.add_routes(routes)
     return app

@@ -4,7 +4,7 @@ id = "siegebot"
 name = "SiegeBot"
 description.en = "Sarcastic Discord moderation bot for R6 Siege communities, with a web admin panel"
 
-version = "1.0.0~ynh1"
+version = "2.0.0~ynh1"
 
 maintainers = []
 
@@ -57,4 +57,4 @@ ram.runtime = "100M"
     [resources.ports]
 
     [resources.apt]
-    packages = "python3-venv, python3-pip"
+    packages = "python3-venv, python3-pip, ffmpeg, libopus0"

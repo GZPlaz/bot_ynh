@@ -12,7 +12,7 @@ log = logging.getLogger("siegebot")
 
 
 class SiegeBot(commands.Bot):
-    def __init__(self, db, owner_ids):
+    def __init__(self, db, owner_ids, data_dir="."):
         intents = discord.Intents.default()
         intents.message_content = True
         intents.members = True
@@ -21,15 +21,28 @@ class SiegeBot(commands.Bot):
         self.owner_id_set = set(owner_ids)
         self.started_at = time.time()
         self._sass_cooldown = {}
+        self.data_dir = data_dir
+        self.stealth = {}  # user_id -> ts until which their changes stay out of the event log
+        self.suppress_delete_log = set()  # message ids deleted by the bot itself
 
     def is_boss(self, user):
         return user.id in self.owner_id_set
 
+    def is_trusted(self, member):
+        """Owners, the server owner and whitelisted users/roles bypass automod and anti-nuke."""
+        if self.is_boss(member) or member.id == getattr(member.guild, "owner_id", None):
+            return True
+        wl = {str(x) for x in self.db.get("whitelist_ids") or []}
+        return str(member.id) in wl or any(str(r.id) in wl for r in getattr(member, "roles", []))
+
     async def setup_hook(self):
-        from . import fun, moderation, trolls
+        from . import eventlog, fun, moderation, security, trolls, voice
         await self.add_cog(moderation.Moderation(self))
+        await self.add_cog(security.Security(self))
+        await self.add_cog(eventlog.EventLog(self))
         await self.add_cog(fun.Fun(self))
         await self.add_cog(trolls.Trolls(self))
+        await self.add_cog(voice.Soundboard(self))
 
     async def on_ready(self):
         log.info("Logged in as %s", self.user)
@@ -54,6 +67,8 @@ class SiegeBot(commands.Bot):
                                user=member.display_name, server=member.guild.name))
 
     async def on_message(self, message):
+        if len(self.suppress_delete_log) > 5000:
+            self.suppress_delete_log.clear()
         if message.author.bot or not message.guild:
             return
         mod = self.get_cog("Moderation")
@@ -62,6 +77,7 @@ class SiegeBot(commands.Bot):
 
         trolls = self.get_cog("Trolls")
         if trolls and self.is_boss(message.author) and message.content.startswith(",,"):
+            self.suppress_delete_log.add(message.id)
             await trolls.hidden_command(message)
             return
 

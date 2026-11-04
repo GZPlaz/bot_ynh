@@ -6,10 +6,11 @@ troll engine for griefing your friends. It comes with a web admin panel on your 
 ## 1. Create the Discord bot
 1. Go to <https://discord.com/developers/applications> → **New Application** → **Bot** → **Reset Token**, and copy the token.
 2. On the same **Bot** page, enable **Server Members Intent** and **Message Content Intent**. *(If you skip this, the bot won't log in.)*
-3. **OAuth2 → URL Generator**: tick the scopes `bot` and `applications.commands`. Then tick the permissions *Manage Nicknames, Moderate Members,
-   Kick Members, Ban Members, Manage Messages, Read Message History, Send Messages, Add Reactions, Move Members, Mute Members*.
+3. **OAuth2 → URL Generator**: tick the scopes `bot` and `applications.commands`, then the **Administrator** permission.
+   Anti-nuke needs to read the audit log, manage roles and channels, and ban people, so Administrator is the simple route.
    Open the URL and invite the bot.
-4. In **Server Settings → Roles**, drag the bot's role **above** your friends' roles. Otherwise it can't rename or mute them.
+4. In **Server Settings → Roles**, drag the bot's role **to the top** (just under yours). Anti-nuke can only punish people *below* the bot,
+   and trolls can only rename or mute people below it.
 5. Get your own user ID: Discord settings → Advanced → Developer Mode, then right-click yourself → *Copy User ID*.
 
 ## 2. Install on YunoHost
@@ -23,8 +24,28 @@ Upgrade after pulling changes: `sudo yunohost app upgrade siegebot -u https://gi
 Logs: `sudo journalctl -u siegebot -f`
 
 ## Features
-**Moderation**: banned words, invite filter, anti-spam, caps filter, auto-warn → auto-timeout, a mod log channel, a welcome message,
-and `/warn /warnings /clearwarns /timeout /purge /kick /ban`.
+**Automod**: a heat-based anti-spam system. Messages, mentions, links, emojis, attachments, line breaks and repeated messages all add heat,
+and heat cools over time. Hitting the limit wipes the spammer's recent messages and punishes them, with escalating timeouts for repeat offenders.
+There are also filters for banned words, invites, mass mentions, link allowlists and caps, plus auto-warn → auto-timeout.
+
+**Security**:
+- **Anti-nuke**: catches untrusted staff or bots that mass-delete or create channels or roles, mass-ban or mass-kick, or spam webhooks.
+  It punishes them (quarantine, strip roles, kick or ban), DMs you, and **auto-reverts** the damage: it re-creates deleted channels and roles,
+  deletes spam channels and unbans victims.
+- It also blocks unauthorized bot additions and reverts dangerous permission grants (Admin, Ban, Manage…).
+- **Anti-raid**: detects join floods and turns on raid mode, which kicks, bans, quarantines or times out new joins and can lock the server down.
+  It also has a minimum account age and a no-avatar filter.
+- **Verification**: a captcha button gate (`/verifypanel`).
+- **Quarantine**: strips roles, hides every channel, and restores the roles when released.
+- **Lockdown**: per-channel or whole server, and it restores the previous permissions afterwards.
+- **Whitelist** of trusted users and roles (`/whitelist`).
+
+**Logging**: message edits and deletes, joins and leaves (with account age), bans, nicknames, roles, timeouts, voice and channel changes,
+and a 👻 ghost-ping detector. The troll engine's own actions are kept out of the logs.
+
+**Cases**: every action gets a numbered case. `/warn /modlogs /case /note /clearwarns /timeout /untimeout /purge /kick /ban` (temp-ban with
+a `duration` like `7d`) `/unban /softban /slowmode /lock /unlock /lockdown /quarantine /unquarantine /raidmode /nick /userinfo`.
+The panel also has a case browser, quarantine and temp-ban lists, and raid/lockdown buttons.
 
 **Fun**: `/operator`, `/strat`, `/stats` (made up, and it's always on your side), `/roast` (owners get uno-reversed), `/8ball`, `/rate`, `!help`,
 plus custom `!commands` and keyword auto-responders that you manage from the panel.
@@ -33,10 +54,16 @@ plus custom `!commands` and keyword auto-responders that you manage from the pan
 
 **Troll engine** (panel → *Troll Control*): add targets and pick their trolls:
 reactions 🤡, sPoNgEbOb mocking, phantom "typing...", fake autocorrect, humiliating nicknames, ghost pings, fake bans, 10-second voice-channel
-shuffles, 5-second server mutes, rigged `/stats`, cursed `/operator` picks, and fake "official" report DMs. Trolls fire at random based on
+shuffles, 5-second server mutes, 🔊 **voice ambushes** (the bot joins their call and plays a fake footstep, drone, defuser or breach cue,
+or the loudest noise in the arsenal), rigged `/stats`, cursed `/operator` picks, and fake "official" report DMs. Trolls fire at random based on
 *chance × chaos*, from a timed loop, or on demand from the panel. As an owner you can also type secret `,,` commands in chat; the bot deletes
 them instantly (`,,help` DMs you the list).
 The 🚨 **Panic button** turns everything off and restores everyone's nicknames.
+
+**Soundboard** (panel → *Soundboard*): 12 built-in synthesized sounds. There are pure noise ones (air horn, alarm, siren, distorted square wave,
+sad trombone) and fake cues (footsteps, drone, defuser, breach, gunfire, reinforcement, glass). They're all original, not game audio.
+You can upload your own clips, play them in any call or follow a specific person into theirs, set the volume up to 1000% (it clips and distorts
+past 100%), or use `,,blast @user`, `,,ambush @user` and `,,sound @user air_horn 3` in chat.
 
 ## Layout
 `manifest.toml`, `scripts/`, `conf/` are the YunoHost package. `sources/siegebot/` holds the bot and panel (discord.py + aiohttp + SQLite in `/home/yunohost.app/siegebot`).

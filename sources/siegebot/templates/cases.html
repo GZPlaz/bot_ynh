@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block body %}
+<h1>Cases</h1><p class="muted">Every warn, timeout, kick, ban, quarantine and note, numbered. Use <code>/case</code> and <code>/modlogs</code> in Discord too.</p>
+<form method="get" class="card row">
+  <select name="action" style="width:auto"><option value="">all actions</option>{% for a in actions %}<option {{ 'selected' if a == action }}>{{ a }}</option>{% endfor %}</select>
+  <input type="text" name="user" value="{{ user }}" placeholder="user name or ID" style="max-width:260px"><button>Filter</button>
+</form>
+{% if quarantined or tempbans %}<div class="card">
+  {% if quarantined %}<h3 style="margin-top:0">☣️ Quarantined</h3><table>{% for q in quarantined %}<tr><td>{{ q.user_id }}</td><td class="muted">{{ q.ts|ts }}</td>
+  <td><form method="post" action="{{ base }}/quarantine/{{ q.guild_id }}/{{ q.user_id }}/release"><button class="ghost">Release &amp; restore roles</button></form></td></tr>{% endfor %}</table>{% endif %}
+  {% if tempbans %}<h3>⏳ Temp-bans</h3><table>{% for t in tempbans %}<tr><td>{{ t.user_id }}</td><td>until {{ t.until|ts }}</td></tr>{% endfor %}</table>{% endif %}
+</div>{% endif %}
+<div class="card"><table><tr><th>#</th><th>When</th><th>Action</th><th>User</th><th>By</th><th>Reason</th><th></th></tr>
+{% for r in rows %}<tr><td>{{ r.id }}</td><td class="muted" style="white-space:nowrap">{{ r.ts|ts }}</td><td><span class="pill">{{ r.action }}</span></td>
+<td>{{ r.user_name }}<br><small>{{ r.user_id }}</small></td><td>{{ r.mod_name }}</td><td>{{ r.reason }}</td>
+<td><form method="post" action="{{ base }}/cases/{{ r.id }}/delete"><button class="ghost">Remove</button></form></td></tr>
+{% else %}<tr><td colspan="7" class="muted">No cases. Everyone is behaving. Unsettling.</td></tr>{% endfor %}</table></div>
+{% endblock %}

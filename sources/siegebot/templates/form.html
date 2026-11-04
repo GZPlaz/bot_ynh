@@ -1,7 +1,8 @@
 {% extends "base.html" %}{% block body %}
 <h1>{{ title }}</h1><p class="muted">{{ intro }}</p>
 <form method="post" class="card">
-{% for key, typ, label, help in fields %}
+{% for f in fields %}
+  {% set key, typ, label, help = f.key, f.typ, f.label, f.help %}
   {% set v = values.get(key) %}
   {% if typ == 'bool' %}
     <label><input type="checkbox" name="{{ key }}" {{ 'checked' if v }}> {{ label }}</label>
@@ -16,6 +17,12 @@
       {% for cid, cname in channels %}<option value="{{ cid }}" {{ 'selected' if cid == v|string }}>{{ cname }}</option>{% endfor %}
       {% if v and channels|selectattr(0, 'equalto', v|string)|list|length == 0 %}<option value="{{ v }}" selected>{{ v }} (unknown)</option>{% endif %}
       </select>
+    {% elif typ == 'role' %}
+      <select id="{{ key }}" name="{{ key }}"><option value="">— none —</option>
+      {% for rid, rname in roles %}<option value="{{ rid }}" {{ 'selected' if rid == v|string }}>{{ rname }}</option>{% endfor %}
+      </select>
+    {% elif typ == 'choice' %}
+      <select id="{{ key }}" name="{{ key }}">{% for c in f.choices %}<option {{ 'selected' if c == v }}>{{ c }}</option>{% endfor %}</select>
     {% elif typ in ('int', 'float') %}<input type="number" step="{{ 'any' if typ == 'float' else '1' }}" id="{{ key }}" name="{{ key }}" value="{{ v }}">
     {% else %}<input type="text" id="{{ key }}" name="{{ key }}" value="{{ v or '' }}">{% endif %}
   {% endif %}

@@ -6,6 +6,7 @@ from aiohttp import web
 
 from .bot import SiegeBot
 from .db import DB
+from .sounds import ensure_builtin
 from .web import create_app
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -15,8 +16,9 @@ log = logging.getLogger("siegebot")
 class Controller:
     """Owns the bot instance so the panel can (re)start it with a new token."""
 
-    def __init__(self, db):
+    def __init__(self, db, data_dir):
         self.db = db
+        self.data_dir = data_dir
         self.bot = None
         self.task = None
         self.error = None
@@ -35,7 +37,7 @@ class Controller:
             self.error = "No bot token configured. Set one in Settings."
             return
         self.error = None
-        self.bot = SiegeBot(self.db, self.owner_ids())
+        self.bot = SiegeBot(self.db, self.owner_ids(), self.data_dir)
         self.task = asyncio.create_task(self._run(self.bot, token))
 
     async def _run(self, bot, token):
@@ -58,9 +60,11 @@ class Controller:
 
 
 async def main():
-    db = DB(os.path.join(os.environ.get("DATA_DIR", "./data"), "siegebot.db"))
-    ctl = Controller(db)
-    app = create_app(db, ctl, os.environ.get("BASE_PATH", "/"))
+    data_dir = os.environ.get("DATA_DIR", "./data")
+    db = DB(os.path.join(data_dir, "siegebot.db"))
+    await asyncio.to_thread(ensure_builtin, data_dir)  # synthesize the noise arsenal (first run only)
+    ctl = Controller(db, data_dir)
+    app = create_app(db, ctl, data_dir, os.environ.get("BASE_PATH", "/"))
     runner = web.AppRunner(app)
     await runner.setup()
     port = int(os.environ.get("PORT", "8085"))

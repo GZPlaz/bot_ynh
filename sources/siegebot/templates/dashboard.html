@@ -16,10 +16,21 @@
       <button class="bad">🚨 Panic button (hide the evidence)</button></form>
   </div>
 </div>
+{% if guilds %}<div class="card">
+  <h3 style="margin-top:0">🛡️ Server protection</h3>
+  <table><tr><th>Server</th><th>Raid mode</th><th>Lockdown</th></tr>
+  {% for x in guilds %}<tr><td><b>{{ x.g.name }}</b></td>
+    <td class="row">{% if x.raid %}<span class="pill off-pill">ACTIVE</span>{% else %}<span class="pill">off</span>{% endif %}
+      <form method="post" action="{{ base }}/guild/{{ x.g.id }}/raid/{{ 'off' if x.raid else 'on' }}"><button class="ghost">{{ 'End raid mode' if x.raid else 'Force raid mode' }}</button></form></td>
+    <td class="row">{% if x.locked %}<span class="pill off-pill">{{ x.locked }} locked</span>{% else %}<span class="pill">open</span>{% endif %}
+      <form method="post" action="{{ base }}/guild/{{ x.g.id }}/lockdown/on" onsubmit="return confirm('Lock every text channel?')"><button class="bad">Lockdown</button></form>
+      <form method="post" action="{{ base }}/guild/{{ x.g.id }}/lockdown/off"><button class="ghost">Unlock</button></form></td></tr>
+  {% endfor %}</table>
+</div>{% endif %}
 <div class="grid">
   <div class="stat"><b>{{ stats.commands }}</b>custom commands</div>
   <div class="stat"><b>{{ stats.responders }}</b>auto-responders</div>
-  <div class="stat"><b>{{ stats.warnings }}</b>warnings issued</div>
+  <div class="stat"><b>{{ stats.cases }}</b>mod cases</div>
   <div class="stat"><b>{{ stats.targets }}</b>troll targets {{ '😈' if trolls_enabled else '(trolls off)' }}</div>
 </div>
 <div class="card">

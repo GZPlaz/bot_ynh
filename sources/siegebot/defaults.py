@@ -10,7 +10,7 @@ DEFENDERS = ["Smoke", "Mute", "Castle", "Pulse", "Doc", "Rook", "Kapkan", "Tacha
              "Thorn", "Azami", "Solis", "Fenrir", "Tubarão", "Sentry", "Skopós"]
 
 TROLL_TYPES = ["react", "mock", "typing", "correct", "nickname", "ghost_ping", "fake_ban", "voice_shuffle",
-               "voice_mute", "fake_stats", "cursed_ops", "dm_report"]
+               "voice_mute", "fake_stats", "cursed_ops", "dm_report", "sound_ambush", "noise_blast"]
 
 TROLL_DESCRIPTIONS = {
     "react": "Randomly reacts to their messages with clowns, salt and skulls",
@@ -25,6 +25,8 @@ TROLL_DESCRIPTIONS = {
     "fake_stats": "/stats always shows them a tragic K/D",
     "cursed_ops": "/operator only gives them cursed loadouts",
     "dm_report": "DMs them a totally official 'report received' notice",
+    "sound_ambush": "Bot sneaks into their voice call and plays a fake cue (footsteps, drone, defuser...)",
+    "noise_blast": "Bot joins their voice call and blasts the loudest noise in the arsenal",
 }
 
 SASS_LINES = [
@@ -136,15 +138,70 @@ DEFAULTS = {
     "filter_invites": True,
     "filter_caps": False,
     "caps_min_length": 12,
-    "anti_spam": True,
-    "spam_messages": 6,
-    "spam_seconds": 5,
+    "mass_mention_limit": 5,
+    "link_filter": False,
+    "link_allowlist": ["tenor.com", "giphy.com", "youtube.com", "youtu.be", "twitch.tv", "imgur.com",
+                       "ubisoft.com", "r6.tracker.network", "discord.com", "cdn.discordapp.com", "media.discordapp.net"],
+    # heat-based anti-spam: every message adds heat, heat cools down over time
+    "heat_enabled": True,
+    "heat_threshold": 100,
+    "heat_decay": 12,
+    "heat_message": 10,
+    "heat_mention": 12,
+    "heat_link": 12,
+    "heat_attachment": 10,
+    "heat_emoji": 3,
+    "heat_newline": 3,
+    "heat_duplicate": 30,
+    "heat_action": "timeout",
     "max_warnings": 3,
     "timeout_minutes": 10,
     "log_channel_id": "",
     "welcome_channel_id": "",
     "welcome_message": "Welcome {mention} to {server}! Don't spawn peek. (You will spawn peek.)",
     "exempt_role_ids": [],
+    "whitelist_ids": [],
+    # anti-nuke
+    "antinuke_enabled": True,
+    "antinuke_window": 30,
+    "nuke_channel_delete": 3,
+    "nuke_channel_create": 6,
+    "nuke_role_delete": 3,
+    "nuke_role_create": 6,
+    "nuke_ban": 3,
+    "nuke_kick": 4,
+    "nuke_webhook": 3,
+    "antinuke_punishment": "quarantine",
+    "antinuke_restore": True,
+    "antibot_add": True,
+    "protect_dangerous_perms": True,
+    # anti-raid
+    "antiraid_enabled": True,
+    "raid_joins": 8,
+    "raid_seconds": 15,
+    "raid_action": "kick",
+    "raid_auto_lockdown": False,
+    "raid_duration_minutes": 10,
+    "min_account_age_days": 0,
+    "young_account_action": "kick",
+    "no_avatar_action": "none",
+    # verification gate
+    "verify_enabled": False,
+    "verified_role_id": "",
+    # quarantine / lockdown state
+    "quarantine_role_id": "",
+    "lockdown_state": {},
+    # event logging
+    "event_log_channel_id": "",
+    "log_messages": True,
+    "log_members": True,
+    "log_roles": True,
+    "log_voice": True,
+    "log_server": True,
+    "ghost_ping_detector": True,
+    # soundboard
+    "sound_volume": 150,
+    "sound_max_seconds": 20,
     # trolls
     "trolls_enabled": True,
     "chaos": 1.0,
