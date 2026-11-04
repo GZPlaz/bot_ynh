@@ -29,7 +29,14 @@ _siegebot_install_code() {
 _siegebot_default_settings() {
     ynh_app_setting_set_default --key=clone_service --value=0
     ynh_app_setting_set_default --key=clone_api_url --value=""
-    ynh_app_setting_set_default --key=clone_token --value="$(ynh_string_random --length=32)"
+    # generate the token with tracing off so it never shows up in the (shareable) YunoHost debug log
+    local _trace=0
+    [[ $- == *x* ]] && _trace=1
+    set +o xtrace
+    if [ -z "$(ynh_app_setting_get --key=clone_token)" ]; then
+        ynh_app_setting_set --key=clone_token --value="$(ynh_string_random --length=32)"
+    fi
+    [ "$_trace" -eq 1 ] && set -o xtrace
     clone_service=$(ynh_app_setting_get --key=clone_service)
     clone_api_url=$(ynh_app_setting_get --key=clone_api_url)
     clone_token=$(ynh_app_setting_get --key=clone_token)
