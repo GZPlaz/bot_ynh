@@ -29,6 +29,15 @@ class SiegeBot(commands.Bot):
     def is_boss(self, user):
         return user.id in self.owner_id_set
 
+    def can_troll(self, member):
+        """Who may use the secret ,, commands: bot owners always, plus server admins and/or a chosen role."""
+        if self.is_boss(member):
+            return True
+        if self.db.get("troll_access") == "admins" and getattr(getattr(member, "guild_permissions", None), "administrator", False):
+            return True
+        rid = str(self.db.get("troll_role_id") or "")
+        return rid.isdigit() and any(r.id == int(rid) for r in getattr(member, "roles", []))
+
     def is_trusted(self, member):
         """Owners, the server owner and whitelisted users/roles bypass automod and anti-nuke."""
         if self.is_boss(member) or member.id == getattr(member.guild, "owner_id", None):
@@ -79,7 +88,7 @@ class SiegeBot(commands.Bot):
             return  # message was removed by moderation
 
         trolls = self.get_cog("Trolls")
-        if trolls and self.is_boss(message.author) and message.content.startswith(",,"):
+        if trolls and message.content.startswith(",,") and self.can_troll(message.author):
             self.suppress_delete_log.add(message.id)
             await trolls.hidden_command(message)
             return

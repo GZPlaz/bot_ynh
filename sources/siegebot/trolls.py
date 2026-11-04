@@ -534,6 +534,18 @@ class Trolls(commands.Cog):
         if not parts:
             return
         cmd = parts[0].lower()
+        author = message.author
+        boss = self.bot.is_boss(author)
+        if not boss:
+            self.db.log("troll", f"{author} used ,,{cmd}" + (f" on {message.mentions[0]}" if message.mentions else ""))
+            # bot owners are immune to admins' trolls
+            if any(self.bot.is_boss(m) for m in message.mentions):
+                try:
+                    await author.send("🛡️ Nice try. Bot owners are immune. This attempt has been noted. 📝")
+                except discord.HTTPException:
+                    pass
+                self.db.log("troll", f"{author} tried to troll a bot owner with ,,{cmd} (blocked)")
+                return
         member = message.mentions[0] if message.mentions else None
         if cmd in HIDDEN and member:
             asyncio.create_task(self.run_action(HIDDEN[cmd], member, channel=message.channel if cmd == "fakeban" else None))
@@ -552,6 +564,9 @@ class Trolls(commands.Cog):
                 self.bot.stealth[member.id] = time.time() + 30
                 asyncio.create_task(self.bot.get_cog("Soundboard").speak(member.voice.channel, text))
         elif cmd == "clone" and member and len(parts) > 2:
+            row = self.db.q("SELECT scope FROM voice_clones WHERE user_id=?", (member.id,), one=True)
+            if not boss and author.id != member.id and (not row or row["scope"] != "everyone"):
+                return  # they only allowed bot owners to use their voice
             text = " ".join(p for p in parts[1:] if not p.startswith("<@"))
             where = message.author.voice or member.voice
             if where and where.channel:
