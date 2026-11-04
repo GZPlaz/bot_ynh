@@ -1,5 +1,7 @@
 """The real reason this bot exists. Shh."""
 import asyncio
+import io
+import os
 import logging
 import random
 import re
@@ -14,15 +16,17 @@ from .util import chance, fill, spongebob
 
 log = logging.getLogger("siegebot.trolls")
 
-PASSIVE = ["react", "mock", "typing", "correct", "parrot", "read_aloud"]
+PASSIVE = ["react", "mock", "typing", "correct", "parrot", "read_aloud", "emoji_bomb", "message_teleport", "pin_shame"]
+IMAGE_EXT = (".png", ".jpg", ".jpeg", ".gif", ".webp")
+FILLER_EMOJI = ["🤡", "🧂", "💀", "🗑️", "🫵", "😬", "🐌", "🧻", "📉", "🥶", "🤓", "😭", "🥱", "🚮", "🍼", "🙈", "🪦", "🫠", "🤨", "🧌"]
 DEATH_RE = re.compile(r"\b(dead|died|i'?m down|rip|my bad|mb|nt|nice try|bruh|ff|gg go next|lag)\b", re.I)
 ACTIVE = ["nickname", "ghost_ping", "fake_ban", "voice_shuffle", "voice_mute", "dm_report", "sound_ambush", "noise_blast",
           "micro_timeout", "voice_kick", "role_of_shame", "ping_spree", "parrot",
-          "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode", "stat_readout"]
+          "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode", "stat_readout", "photo_spam"]
 VOICE_ACTIONS = ("voice_shuffle", "voice_mute", "sound_ambush", "noise_blast", "voice_kick",
                  "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode", "stat_readout",
                  "commentator", "join_announcer")
-RARE = ("fake_ban", "dm_report", "micro_timeout", "voice_kick", "role_of_shame")
+RARE = ("fake_ban", "dm_report", "micro_timeout", "voice_kick", "role_of_shame", "photo_spam")
 ACTIONS = {
     "nickname": "Rename", "restore_nick": "Restore nickname", "ghost_ping": "Ghost ping",
     "fake_ban": "Fake ban", "voice_shuffle": "Voice shuffle", "voice_mute": "Voice mute 5s",
@@ -33,13 +37,16 @@ ACTIONS = {
     "voice_deafen": "Deafen 6s", "voice_stutter": "Mic stutter", "voice_jail": "Voice jail 20s",
     "fake_callout": "Robot fake callout", "potato_mode": "Potato mode (8 kbps, 2 min)",
     "commentator": "Death commentary", "join_announcer": "Robot announcement", "stat_readout": "Read stats aloud",
+    "photo_spam": "Photo spam", "emoji_bomb": "Emoji bomb (last message)", "message_teleport": "Teleport last message",
+    "pin_shame": "Pin last message", "unpin_shame": "Unpin all shame pins",
 }
 HIDDEN = {"nick": "nickname", "unnick": "restore_nick", "ghost": "ghost_ping", "fakeban": "fake_ban",
           "shuffle": "voice_shuffle", "mute": "voice_mute", "report": "dm_report", "mock": "mock_next",
           "ambush": "sound_ambush", "blast": "noise_blast", "tout": "micro_timeout", "vkick": "voice_kick",
           "shame": "role_of_shame", "unshame": "remove_shame", "spree": "ping_spree", "parrot": "parrot",
           "deafen": "voice_deafen", "stutter": "voice_stutter", "jail": "voice_jail", "callout": "fake_callout",
-          "potato": "potato_mode", "dead": "commentator", "announce": "join_announcer", "readstats": "stat_readout"}
+          "potato": "potato_mode", "dead": "commentator", "announce": "join_announcer", "readstats": "stat_readout",
+          "bomb": "emoji_bomb", "teleport": "message_teleport", "pin": "pin_shame"}
 
 
 class Trolls(commands.Cog):
@@ -52,6 +59,7 @@ class Trolls(commands.Cog):
         self.sniped = {}  # user_id -> last snipe ts
         self.potato = {}  # voice channel id -> original bitrate
         self.voice_cooldown = {}  # (user_id, kind) -> ts
+        self.last_msg = {}  # user_id -> their latest message (for bomb/teleport/pin)
         self.renaming = set()  # ids the bot is renaming right now (so nick_lock ignores our own edits)
 
     async def cog_load(self):
@@ -390,6 +398,102 @@ class Trolls(commands.Cog):
             await asyncio.sleep(random.uniform(1.5, 4))
             await self.run_action("join_announcer", member)
 
+    # ------------------------------------------------------------------ photo spam & friends
+    def image_dir(self):
+        d = os.path.join(self.bot.data_dir, "images")
+        os.makedirs(d, exist_ok=True)
+        return d
+
+    def images(self):
+        return sorted(os.path.join(self.image_dir(), f) for f in os.listdir(self.image_dir()) if f.lower().endswith(IMAGE_EXT))
+
+    def spam_channel(self, member, channel=None):
+        if channel:
+            return channel
+        last = self.last_msg.get(member.id)
+        if last and last.guild == member.guild:
+            return last.channel
+        return member.guild.system_channel or (self.sendable_channels(member.guild) or [None])[0]
+
+    async def do_photo_spam(self, member, channel=None, count=None):
+        ch = self.spam_channel(member, channel)
+        if not ch:
+            return "no channel"
+        count = max(1, min(15, int(count or self.db.get("spam_count") or 6)))  # Discord's own anti-spam kicks in fast
+        interval = max(0.8, float(self.db.get("spam_interval") or 1.2))
+        delete_after = float(self.db.get("spam_delete_after") or 0) or None
+        files, urls = self.images(), [u for u in self.db.get("spam_image_urls") or [] if u.startswith("http")]
+        avatar = None
+        if not files and not urls:
+            avatar = await member.display_avatar.replace(size=512, static_format="png").read()
+        sent = 0
+        for i in range(count):
+            mention = member.mention if i == 0 else None
+            pick = random.choice(files + urls) if (files or urls) else None
+            if pick and pick.startswith("http"):
+                await ch.send(f"{mention or ''} {pick}".strip(), delete_after=delete_after)
+            elif pick:
+                await ch.send(mention, file=discord.File(pick), delete_after=delete_after)
+            else:
+                ext = "gif" if member.display_avatar.is_animated() else "png"
+                await ch.send(mention, file=discord.File(io.BytesIO(avatar), filename=f"{member.display_name}.{ext}"),
+                              delete_after=delete_after)
+            sent += 1
+            await asyncio.sleep(interval)
+        return f"spammed {sent} pictures in #{ch.name}"
+
+    async def do_emoji_bomb(self, member, channel=None, message=None):
+        msg = message or self.last_msg.get(member.id)
+        if not msg:
+            return "no recent message from them"
+        words = [w.upper() for w in self.db.get("bomb_words") or [] if w.isalpha() and len(set(w.upper())) == len(w)]
+        letters = [chr(0x1F1E6 + ord(c) - 65) for c in random.choice(words)] if words else []
+        extras = random.sample(FILLER_EMOJI, k=max(0, min(len(FILLER_EMOJI), 14 - len(letters))))
+        for e in letters + extras:  # Discord allows 20 different reactions per message
+            await msg.add_reaction(e)
+        return f"emoji-bombed their message ({len(letters + extras)} reactions)"
+
+    async def do_message_teleport(self, member, channel=None, message=None):
+        msg = message or self.last_msg.get(member.id)
+        if not msg:
+            return "no recent message from them"
+        targets = [c for c in self.sendable_channels(msg.guild) if c != msg.channel and c.permissions_for(member).view_channel]
+        if not targets:
+            return "no other channel"
+        dest = random.choice(targets)
+        files = " ".join(a.url for a in msg.attachments)
+        body = (msg.content + (" " + files if files else "")).strip()[:1800] or "*(nothing, somehow)*"
+        self.bot.suppress_delete_log.add(msg.id)
+        await msg.delete()
+        self.last_msg.pop(member.id, None)
+        await dest.send(f"📦 **{member.display_name}** said this in {msg.channel.mention}, moved to the correct channel:\n> {body}",
+                        allowed_mentions=discord.AllowedMentions.none())
+        return f"teleported their message to #{dest.name}"
+
+    async def do_pin_shame(self, member, channel=None, message=None):
+        msg = message or self.last_msg.get(member.id)
+        if not msg:
+            return "no recent message from them"
+        await msg.pin(reason="For posterity")
+        pins = self.db.get("shame_pins") or []
+        pins.append([msg.channel.id, msg.id])
+        self.db.set("shame_pins", pins[-100:])
+        await msg.reply("📌 Pinned for posterity. Future generations must learn from this.", mention_author=False)
+        return f"pinned their message in #{msg.channel.name}"
+
+    async def do_unpin_shame(self, member=None, channel=None):
+        n = 0
+        for cid, mid in self.db.get("shame_pins") or []:
+            ch = self.bot.get_channel(cid)
+            try:
+                if ch:
+                    await (await ch.fetch_message(mid)).unpin(reason="Cleanup")
+                    n += 1
+            except discord.HTTPException:
+                pass
+        self.db.set("shame_pins", [])
+        return f"unpinned {n} message(s)"
+
     async def unpotato(self, channel_id=None):
         for cid in [channel_id] if channel_id else list(self.potato):
             ch = self.bot.get_channel(cid)
@@ -416,6 +520,7 @@ class Trolls(commands.Cog):
         self.parrots.clear()
         self.mock_next.clear()
         await self.unpotato()
+        await self.do_unpin_shame()
         await self.expire_shame(everything=True)
         for gid, rid in (self.db.get("shame_roles") or {}).items():
             guild = self.bot.get_guild(int(gid))
@@ -437,6 +542,7 @@ class Trolls(commands.Cog):
 
     # ------------------------------------------------------------------ passive
     async def on_target_message(self, message):
+        self.last_msg[message.author.id] = message
         if message.author.id in self.mock_next:
             self.mock_next.discard(message.author.id)
             await message.reply(spongebob(message.content) or "🤡", mention_author=False)
@@ -479,6 +585,12 @@ class Trolls(commands.Cog):
                 if text.strip():
                     asyncio.create_task(self.say_in_call(message.author, f"{message.author.display_name} says: {text}",
                                                          own_voice=True))
+            elif kind == "emoji_bomb":
+                await self.do_emoji_bomb(message.author, message=message)
+            elif kind == "message_teleport" and chance(0.5):  # extra rare: it deletes their message
+                await self.run_action("message_teleport", message.author)
+            elif kind == "pin_shame" and chance(0.3) and len(message.content) > 15:
+                await self.do_pin_shame(message.author, message=message)
             elif kind == "parrot":
                 self.parrots[message.author.id] = time.time() + 180
                 await message.channel.send(message.content[:2000] or "🦜", allowed_mentions=discord.AllowedMentions.none())
@@ -523,6 +635,7 @@ class Trolls(commands.Cog):
         ,,deafen @user  ,,stutter @user  ,,jail @user  ,,callout @user  ,,potato @user
         ,,tts @user <text>   (robot voice says anything in their call)
         ,,dead @user  ,,announce @user  ,,readstats @user
+        ,,spam @user [count]  ,,bomb @user  ,,teleport @user  ,,pin @user  ,,unpin
         ,,clone @user <text>   (opted-in voice clone of @user speaks in YOUR call, or theirs if you're not in one)
         ,,sound @user <name> [times]   (or ,,sound <name> to play in YOUR channel)  ,,stop  ,,sounds
         ,,target @user  ,,untarget @user  ,,chaos 2  ,,on  ,,off  ,,panic"""
@@ -563,6 +676,13 @@ class Trolls(commands.Cog):
             if member.voice and member.voice.channel:
                 self.bot.stealth[member.id] = time.time() + 30
                 asyncio.create_task(self.bot.get_cog("Soundboard").speak(member.voice.channel, text))
+        elif cmd == "spam":
+            count = next((int(p) for p in parts[1:] if p.isdigit()), None)
+            if member:
+                self.bot.stealth[member.id] = time.time() + 30
+                asyncio.create_task(self.do_photo_spam(member, message.channel, count))
+        elif cmd == "unpin":
+            await self.do_unpin_shame()
         elif cmd == "clone" and member and len(parts) > 2:
             row = self.db.q("SELECT scope FROM voice_clones WHERE user_id=?", (member.id,), one=True)
             if not boss and author.id != member.id and (not row or row["scope"] != "everyone"):

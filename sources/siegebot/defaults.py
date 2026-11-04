@@ -13,7 +13,8 @@ TROLL_TYPES = ["react", "mock", "typing", "correct", "nickname", "ghost_ping", "
                "voice_mute", "fake_stats", "cursed_ops", "dm_report", "sound_ambush", "noise_blast",
                "nick_lock", "micro_timeout", "voice_kick", "role_of_shame", "typing_sniper", "parrot", "ping_spree",
                "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode",
-               "read_aloud", "join_announcer", "commentator", "stat_readout"]
+               "read_aloud", "join_announcer", "commentator", "stat_readout",
+               "photo_spam", "emoji_bomb", "message_teleport", "pin_shame"]
 
 TROLL_DESCRIPTIONS = {
     "react": "Randomly reacts to their messages with clowns, salt and skulls",
@@ -46,6 +47,10 @@ TROLL_DESCRIPTIONS = {
     "join_announcer": "Every time they join a voice channel, a robot announces their arrival. Warmly. (Not warmly.)",
     "commentator": "Typing 'dead', 'rip', 'my bad', 'nt'... triggers a sports commentator narrating their failure in the call",
     "stat_readout": "Robot voice reads their (tragic) stats to the whole call",
+    "photo_spam": "Spams a picture (your uploads, or their own profile picture) where they last talked",
+    "emoji_bomb": "Buries their message under a wall of reactions that spell things like B-O-T-F-R-A-G",
+    "message_teleport": "Their message vanishes and reappears in a random other channel, 'moved to the correct channel'",
+    "pin_shame": "Pins their message 'for posterity'. Everyone gets the pin notification.",
 }
 
 SASS_LINES = [
@@ -292,6 +297,13 @@ DEFAULTS = {
     "tier_reviewer_role_id": "",
     "tier_max_pending": 3,
     "public_leaderboard": False,
+    # photo spam & friends
+    "spam_count": 6,
+    "spam_interval": 1.2,
+    "spam_delete_after": 0,
+    "spam_image_urls": [],
+    "bomb_words": ["BOTFRAG", "COPIUM", "TRASH", "BRONZE", "NOPE"],
+    "shame_pins": [],
     "clone_api_url": "",
     "clone_api_token": "",
     "clone_exaggeration": 0.6,

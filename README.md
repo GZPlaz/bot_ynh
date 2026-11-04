@@ -67,7 +67,8 @@ reactions 🤡, sPoNgEbOb mocking, phantom "typing...", fake autocorrect, humili
 shuffles, 5-second server mutes, 🔊 **voice ambushes** (the bot joins their call and plays a fake footstep, drone, defuser or breach cue,
 or the loudest noise in the arsenal), rigged `/stats`, cursed `/operator` picks, and fake "official" report DMs, nickname lock (rename yourself back → new humiliating name), 30–90s micro-timeouts
 with absurd reasons, voice disconnects, a hoisted hot-pink role of shame, a typing sniper ("nobody asked" before they hit enter),
-parrot mode, ghost-ping sprees across 5 channels, and voice chaos: 6-second deafens, a "dying mic" mute stutter, a 20-second solo voice
+parrot mode, ghost-ping sprees across 5 channels, 📸 **photo spam** (your uploaded pictures, or their own profile picture), 🧨 emoji bombs spelling B-O-T-F-R-A-G,
+📦 message teleporting, 📌 pins of shame, and voice chaos: 6-second deafens, a "dying mic" mute stutter, a 20-second solo voice
 jail, a robot voice yelling fake callouts in their call, and potato mode (their channel drops to 8 kbps for 2 minutes).
 Robot-voice chaos: every victim gets their own personal robot voice, which **reads their text messages aloud** while they're in voice.
 A **join announcer** greets them ("Please lower your expectations"), a **sports commentator** narrates the moment they type "dead",
