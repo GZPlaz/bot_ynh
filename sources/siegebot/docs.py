@@ -41,11 +41,12 @@ def _cmd_rows(cog_cls, category):
 
 def build():
     from .fun import Fun
+    from .leaderboard import Leaderboard
     from .moderation import Moderation
     from .security import Security
     from .voiceclone import VoiceClone
     commands = (_cmd_rows(Moderation, "Moderation") + _cmd_rows(Security, "Security") + _cmd_rows(Fun, "Fun")
-                + _cmd_rows(VoiceClone, "Voice clones"))
+                + _cmd_rows(Leaderboard, "Leaderboard") + _cmd_rows(VoiceClone, "Voice clones"))
     trolls = []
     for t in TROLL_TYPES:
         if t in PASSIVE:

@@ -13,6 +13,11 @@ ynh_restore "/etc/systemd/system/$app.service"
 systemctl enable "$app.service" --quiet
 yunohost service add "$app" --description="SiegeBot Discord bot"
 
+if _is_true "$(ynh_app_setting_get --key=clone_service)"; then
+    ynh_script_progression "Reinstalling the voice clone service..."
+    _clone_install
+fi
+
 ynh_script_progression "Reloading services..."
 ynh_systemctl --service="$app" --action="start"
 ynh_systemctl --service=nginx --action=reload

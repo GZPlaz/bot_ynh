@@ -37,7 +37,7 @@ class SiegeBot(commands.Bot):
         return str(member.id) in wl or any(str(r.id) in wl for r in getattr(member, "roles", []))
 
     async def setup_hook(self):
-        from . import eventlog, fun, moderation, security, trolls, voice, voiceclone
+        from . import eventlog, fun, leaderboard, moderation, security, trolls, voice, voiceclone
         await self.add_cog(moderation.Moderation(self))
         await self.add_cog(security.Security(self))
         await self.add_cog(eventlog.EventLog(self))
@@ -45,6 +45,7 @@ class SiegeBot(commands.Bot):
         await self.add_cog(trolls.Trolls(self))
         await self.add_cog(voice.Soundboard(self))
         await self.add_cog(voiceclone.VoiceClone(self))
+        await self.add_cog(leaderboard.Leaderboard(self))
 
     async def on_ready(self):
         log.info("Logged in as %s", self.user)

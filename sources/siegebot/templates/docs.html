@@ -9,7 +9,8 @@
   <a href="#commands">4. Slash commands</a><a href="#automod">5. Automod &amp; heat</a><a href="#security">6. Security</a>
   <a href="#logging">7. Logging</a><a href="#cases">8. Cases</a><a href="#trolls">9. 🤫 Troll engine</a>
   <a href="#secret">10. 🤫 Secret chat commands</a><a href="#sound">11. Soundboard &amp; robot voice</a><a href="#clones">12. Voice clones</a>
-  <a href="#settings">13. Settings reference</a><a href="#perms">14. Permissions checklist</a><a href="#faq">15. Troubleshooting</a>
+  <a href="#leaderboard">13. 🏅 Leaderboard</a><a href="#plugins">14. 🧩 Plugins</a>
+  <a href="#settings">15. Settings reference</a><a href="#perms">16. Permissions checklist</a><a href="#faq">17. Troubleshooting</a>
 </div>
 
 <h2 id="start">1. Quick start</h2>
@@ -52,7 +53,7 @@
 
 <h2 id="commands">4. Slash commands</h2>
 <p>Moderation commands are hidden from members who lack the listed permission. You can change that in Server Settings → Integrations → SiegeBot.</p>
-{% for cat in ['Moderation', 'Security', 'Fun', 'Voice clones'] %}
+{% for cat in ['Moderation', 'Security', 'Fun', 'Leaderboard', 'Voice clones'] %}
 <h3>{{ cat }}</h3>
 <table><tr><th>Command</th><th>What it does</th><th>Who</th></tr>
 {% for c in d.commands if c.category == cat %}<tr><td style="white-space:nowrap"><code>{{ c.name }}</code> <small>{{ c.params }}</small></td><td>{{ c.desc }}</td><td><small>{{ c.perms }}</small></td></tr>{% endfor %}
@@ -148,14 +149,32 @@ In Discord: <code>/modlogs @user</code>, <code>/case 42</code>, <code>/note</cod
 <p>Cloning needs the separate clone service (<code>clone_server/</code> in the repo, roughly 4 GB RAM; a GPU makes it fast). Set its URL and token in
 <a href="{{ base }}/settings/voice">Robot Voice &amp; Clones</a>, then press <i>Test clone service</i> on the Soundboard. Setup steps are in <code>INSTALL.md</code>.</p>
 
-<h2 id="settings">13. Settings reference</h2>
+<h2 id="leaderboard">13. 🏅 Leaderboard</h2>
+<p>Every player can be rated <b>Tier 1</b> (best) to <b>Tier 5</b> (worst). Tier names are editable in <a href="{{ base }}/settings/leaderboard">Leaderboard settings</a>.</p>
+<ul>
+  <li><code>/leaderboard</code> shows the tier list. <code>/tier show</code> shows one player, and <code>/tier history</code> shows their past changes with reasons.</li>
+  <li><b>Suggesting a change:</b> anyone runs <code>/tier suggest @player &lt;tier&gt; &lt;reason&gt;</code>. A reason of 10–300 characters is required. Nothing changes until a reviewer approves.</li>
+  <li><b>Reviewing:</b> suggestions appear in the <b>review channel</b> with ✅ Approve / ❌ Reject buttons (reject asks for an optional note), and on the <a href="{{ base }}/leaderboard">Leaderboard</a> page.
+  The requester gets a DM with the verdict. Reviewers are bot owners, anyone with Manage Server, and the optional reviewer role. Nobody can review their own suggestion.</li>
+  <li><b>Direct edits:</b> reviewers can use <code>/tier set</code> (tier 0 removes someone), or the "Set directly" form in the panel. These are logged in the history too.</li>
+  <li><b>Limits:</b> one pending suggestion per person per player, and a configurable maximum of open suggestions per person.</li>
+  <li><b>Public page (optional):</b> turn on "Public leaderboard page" to get a read-only tier list at <a href="{{ base }}/public/leaderboard">{{ base }}/public/leaderboard</a>
+  that friends can open without logging in. It shows only names, avatars and tiers. You can also restrict it in YunoHost → Users → Permissions → <i>siegebot.leaderboard</i>.</li>
+</ul>
+
+<h2 id="plugins">14. 🧩 Plugins</h2>
+<p>The <b>voice clone service</b> is an optional plugin. You can install it when installing the app (the YunoHost installer asks), or later at any time:
+YunoHost web admin → Applications → SiegeBot → <b>Configuration → Plugins</b>, then toggle and save. Turning it off uninstalls it and frees the disk space.
+The <a href="{{ base }}/plugins">Plugins</a> page shows its status and has a connection test. A clone URL set in Robot Voice &amp; Clones (e.g. a GPU PC) overrides the plugin.</p>
+
+<h2 id="settings">15. Settings reference</h2>
 {% for key, s in sections_docs.items() %}
 <h3><a href="{{ base }}/settings/{{ key }}">{{ s[0] }}</a></h3>
 <p class="muted">{{ s[1] }}</p>
 <table>{% for f in s[2] %}<tr><td style="width:34%"><b>{{ f.label }}</b><br><small><code>{{ f.key }}</code></small></td><td>{{ f.help or '' }}{% if f.choices %} <small>Options: {{ f.choices|join(', ') }}</small>{% endif %}</td></tr>{% endfor %}</table>
 {% endfor %}
 
-<h2 id="perms">14. Permissions checklist</h2>
+<h2 id="perms">16. Permissions checklist</h2>
 <ul>
   <li><b>Developer portal → Bot:</b> Server Members Intent ✅ and Message Content Intent ✅.</li>
   <li><b>Invite permissions:</b> Administrator. That's the easy route; anti-nuke, quarantine, lockdown, voice jail and potato mode all need management permissions.</li>
@@ -163,7 +182,7 @@ In Discord: <code>/modlogs @user</code>, <code>/case 42</code>, <code>/note</cod
   <li><b>Server owner:</b> Discord never lets bots act on the server owner. That's a Discord rule, not a bug.</li>
 </ul>
 
-<h2 id="faq">15. Troubleshooting</h2>
+<h2 id="faq">17. Troubleshooting</h2>
 <table>
   <tr><td><b>Dashboard: "LoginFailure / Improper token"</b></td><td>Reset the token in the developer portal and paste it into General.</td></tr>
   <tr><td><b>"PrivilegedIntentsRequired"</b></td><td>Enable both intents (section 14), then click Restart.</td></tr>

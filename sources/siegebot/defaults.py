@@ -283,6 +283,13 @@ DEFAULTS = {
     "jail_names": JAIL_NAMES,
     "commentator_lines": COMMENTATOR_LINES,
     "announcer_lines": ANNOUNCER_LINES,
+    # leaderboard
+    "tier_names": ["Siege Gods", "Cracked", "Solid", "Hit or Miss", "Bot Frag"],
+    "tier_requests_enabled": True,
+    "tier_review_channel_id": "",
+    "tier_reviewer_role_id": "",
+    "tier_max_pending": 3,
+    "public_leaderboard": False,
     "clone_api_url": "",
     "clone_api_token": "",
     "clone_exaggeration": 0.6,

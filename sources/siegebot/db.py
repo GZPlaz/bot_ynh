@@ -31,6 +31,13 @@ CREATE TABLE IF NOT EXISTS voice_clones (
     sample TEXT, uses INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS pending_clones (
     user_id INTEGER PRIMARY KEY, user_name TEXT, sample TEXT, uploaded_by TEXT, ts REAL, dm_status TEXT);
+CREATE TABLE IF NOT EXISTS ratings (
+    guild_id INTEGER, user_id INTEGER, user_name TEXT, tier INTEGER, updated_ts REAL, PRIMARY KEY(guild_id, user_id));
+CREATE TABLE IF NOT EXISTS tier_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER, target_id INTEGER, target_name TEXT,
+    requester_id INTEGER, requester_name TEXT, from_tier INTEGER, to_tier INTEGER, reason TEXT,
+    status TEXT NOT NULL DEFAULT 'pending', ts REAL, reviewer TEXT, review_note TEXT, review_ts REAL,
+    channel_id INTEGER, message_id INTEGER);
 CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, kind TEXT, message TEXT);
 """
 

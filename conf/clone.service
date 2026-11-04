@@ -1,0 +1,29 @@
+[Unit]
+Description=SiegeBot voice clone service (Chatterbox)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__APP__
+Group=__APP__
+WorkingDirectory=__INSTALL_DIR__/clone_server/
+EnvironmentFile=__INSTALL_DIR__/.env
+Environment=HF_HOME=__CLONE_ROOT__/hf_cache
+Environment=OMP_NUM_THREADS=2
+ExecStart=__CLONE_ROOT__/venv/bin/python server.py --host 127.0.0.1 --port __PORT_CLONE__ --device cpu
+Restart=on-failure
+RestartSec=30
+Nice=10
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+
+[Install]
+WantedBy=multi-user.target

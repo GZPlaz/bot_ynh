@@ -6,9 +6,9 @@ ynh_script_progression "Installing the bot code and Python dependencies..."
 _siegebot_install_code
 
 ynh_script_progression "Writing configuration..."
-ynh_config_add --template=".env" --destination="$install_dir/.env"
-chmod 600 "$install_dir/.env"
-chown "$app:$app" "$install_dir/.env"
+install_clone="$clone_service"
+_siegebot_default_settings
+_siegebot_write_env
 chown -R "$app:$app" "$data_dir"
 chmod 750 "$data_dir"
 
@@ -16,6 +16,11 @@ ynh_script_progression "Configuring NGINX and systemd..."
 ynh_config_add_nginx
 ynh_config_add_systemd
 yunohost service add "$app" --description="SiegeBot Discord bot"
+
+if _is_true "$install_clone"; then
+    ynh_script_progression "Installing the voice clone service (this is the slow part)..."
+    _clone_install
+fi
 
 ynh_script_progression "Starting the bot..."
 ynh_systemctl --service="$app" --action="start"

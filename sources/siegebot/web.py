@@ -99,9 +99,17 @@ SECTIONS = {
         ("commentator_lines", "lines", "Death commentator lines", "Use {user}."),
         ("announcer_lines", "lines", "Voice join announcer lines", "Use {user}."),
         ("fake_callouts", "lines", "Fake voice callouts", ""),
-        ("clone_api_url", "str", "Voice clone service URL", "e.g. http://127.0.0.1:8765 (see clone_server/ in the repo). Leave empty to disable."),
-        ("clone_api_token", "secret", "Voice clone service token", "Same as CLONE_TOKEN on the service. Leave blank to keep."),
+        ("clone_api_url", "str", "Voice clone service URL (override)", "Leave empty to use the YunoHost plugin. Set it to use another machine, e.g. a GPU PC: http://192.168.1.50:8765"),
+        ("clone_api_token", "secret", "Voice clone service token (override)", "Only needed with the URL override; same as CLONE_TOKEN on that machine. Leave blank to keep."),
         ("clone_exaggeration", "float", "Clone expressiveness", "0.25 = calm, 0.5 = normal, 1.0+ = unhinged."),
+    ]),
+    "leaderboard": ("Leaderboard settings", "Tier 1 is the best, Tier 5 the worst. Anyone can suggest a revision with a reason; reviewers approve or reject.", [
+        ("tier_names", "lines", "Tier names (exactly 5 lines, Tier 1 first)", ""),
+        ("tier_requests_enabled", "bool", "Allow /tier suggest", ""),
+        ("tier_review_channel_id", "channel", "Review channel", "New suggestions are posted here with Approve/Reject buttons."),
+        ("tier_reviewer_role_id", "role", "Reviewer role", "Can approve/reject and /tier set. Bot owners and Manage Server can always review."),
+        ("tier_max_pending", "int", "Max pending suggestions per person", ""),
+        ("public_leaderboard", "bool", "Public leaderboard page", "Read-only tier list at <your panel URL>/public/leaderboard with no login. Shows only names and tiers."),
     ]),
     "trollcfg": ("Troll Arsenal", "The content used by the secret trolls.", [
         ("nicknames", "lines", "Humiliating nicknames", "Max 32 characters each."),
@@ -452,7 +460,7 @@ def create_app(db, ctl, data_dir, base_path):
         all_members = sorted({(str(m.id), f"{m.display_name} ({m})") for g in (b.guilds if b else []) for m in g.members
                               if not m.bot}, key=lambda x: x[1].lower())
         return render("sounds.html", request, sounds=sound_lib.list_sounds(data_dir), vchans=vchans, members=members,
-                      clones=clones, clone_url=db.get("clone_api_url"), pending=pending, all_members=all_members,
+                      clones=clones, clone_url=clone_endpoint()[0], pending=pending, all_members=all_members,
                       volume=db.get("sound_volume"), max_seconds=db.get("sound_max_seconds"))
 
     @routes.get("/sounds/file/{name}")
@@ -580,19 +588,33 @@ def create_app(db, ctl, data_dir, base_path):
         db.q("DELETE FROM pending_clones WHERE user_id=?", (uid,))
         go("/sounds", "Request cancelled and sample deleted.")
 
+    def clone_endpoint():
+        url = (db.get("clone_api_url") or "").strip()
+        if url:
+            return url.rstrip("/"), "admin panel setting"
+        env_url = os.environ.get("CLONE_API_URL", "").strip()
+        return (env_url.rstrip("/"), "YunoHost plugin") if env_url else ("", "")
+
+    @routes.get("/plugins")
+    async def plugins_get(request):
+        url, source = clone_endpoint()
+        return render("plugins.html", request, clone_url=url, clone_source=source,
+                      app_id=os.environ.get("APP_ID", "siegebot"))
+
     @routes.post("/clones/test")
     async def clones_test(request):
         import aiohttp
-        url = (db.get("clone_api_url") or "").rstrip("/")
+        url, _src = clone_endpoint()
+        back = request.query.get("back", "/sounds")
         if not url:
-            go("/settings/voice", "Set the clone service URL first.")
+            go("/plugins", "No clone service yet. Install the plugin (see below) or set a URL.")
         try:
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as http:
                 async with http.get(url + "/health") as r:
                     msg = f"Clone service OK: {await r.text()}" if r.status == 200 else f"Clone service answered {r.status}"
         except Exception as e:
             msg = f"Can't reach clone service: {e or type(e).__name__}"
-        go("/sounds", msg)
+        go(back if back in ("/sounds", "/plugins") else "/sounds", msg)
 
     @routes.post("/sounds/stop")
     async def sounds_stop(request):
@@ -634,6 +656,70 @@ def create_app(db, ctl, data_dir, base_path):
         if s and not s["builtin"]:
             os.remove(s["file"])
         go("/sounds", "Deleted." if s and not s["builtin"] else "Built-in sounds can't be deleted.")
+
+    # ---------------- leaderboard
+    def lb():
+        b = bot()
+        return b, (b.get_cog("Leaderboard") if b else None)
+
+    def tier_name(n):
+        names = db.get("tier_names") or []
+        return f"Tier {n}" + (f": {names[n - 1]}" if 0 < n <= len(names) else "")
+
+    def boards():
+        b = bot()
+        gids = {g.id: g.name for g in b.guilds} if b else {}
+        for r in db.q("SELECT DISTINCT guild_id FROM ratings"):
+            gids.setdefault(r["guild_id"], str(r["guild_id"]))
+        out = []
+        for gid, gname in gids.items():
+            rows = db.q("SELECT * FROM ratings WHERE guild_id=? ORDER BY tier, user_name COLLATE NOCASE", (gid,))
+            g = b.get_guild(gid) if b else None
+            for r in rows:
+                m = g.get_member(r["user_id"]) if g else None
+                r["display"] = m.display_name if m else r["user_name"].split("#")[0]
+                r["avatar"] = m.display_avatar.url if m else None
+            out.append({"id": gid, "name": gname, "tiers": [(t, tier_name(t), [r for r in rows if r["tier"] == t]) for t in range(1, 6)],
+                        "members": sorted(((str(m.id), f"{m.display_name} ({m})") for m in g.members if not m.bot),
+                                          key=lambda x: x[1].lower()) if g else []})
+        return out
+
+    @routes.get("/leaderboard")
+    async def leaderboard_get(request):
+        pending = db.q("SELECT * FROM tier_requests WHERE status='pending' ORDER BY ts")
+        history = db.q("SELECT * FROM tier_requests WHERE status!='pending' ORDER BY COALESCE(review_ts, ts) DESC LIMIT 100")
+        return render("leaderboard.html", request, boards=boards(), pending=pending, history=history, tier_name=tier_name)
+
+    @routes.post("/leaderboard/set")
+    async def leaderboard_set(request):
+        f = await request.post()
+        b, cog = lb()
+        if not cog:
+            go("/leaderboard", "Bot offline.")
+        g = b.get_guild(int(f.get("guild", "0") or 0))
+        uid = f.get("user_id", "")
+        m = g.get_member(int(uid)) if g and uid.isdigit() else None
+        if not m:
+            go("/leaderboard", "Pick a member.")
+        tier = max(0, min(5, int(f.get("tier") or 0)))
+        cog.set_direct(g.id, m.id, str(m), tier, "admin panel", f.get("reason", "").strip())
+        go("/leaderboard", f"{m.display_name} is now {tier_name(tier) if tier else 'unranked'}.")
+
+    @routes.post("/leaderboard/review/{rid}")
+    async def leaderboard_review(request):
+        f = await request.post()
+        b, cog = lb()
+        if not cog:
+            go("/leaderboard", "Bot offline.")
+        msg = await cog.review(int(request.match_info["rid"]), f.get("action") == "approve", "admin panel", f.get("note", ""))
+        go("/leaderboard", msg)
+
+    @routes.get("/public/leaderboard")
+    async def public_leaderboard(request):
+        if not db.get("public_leaderboard"):
+            raise web.HTTPNotFound(text="The public leaderboard is turned off.")
+        html = env.get_template("public_leaderboard.html").render(boards=boards(), base=base)
+        return web.Response(text=html, content_type="text/html")
 
     @routes.get("/docs")
     async def docs_get(request):

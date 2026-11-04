@@ -120,6 +120,13 @@ class Soundboard(commands.Cog):
         return await self._play_temp(channel, sound, times, text)
 
     # ------------------------------------------------------------------ opt-in voice clones
+    def clone_endpoint(self):
+        """Panel setting wins (e.g. a GPU PC); otherwise the YunoHost-installed plugin from .env."""
+        url = (self.db.get("clone_api_url") or "").strip() or os.environ.get("CLONE_API_URL", "").strip()
+        token = (self.db.get("clone_api_token") or "").strip() if (self.db.get("clone_api_url") or "").strip() \
+            else os.environ.get("CLONE_TOKEN", "")
+        return url.rstrip("/"), token
+
     def clone_ready(self, user_id):
         row = self.db.q("SELECT * FROM voice_clones WHERE user_id=?", (int(user_id),), one=True)
         return row if row and row["sample"] and os.path.exists(row["sample"]) else None
@@ -129,9 +136,9 @@ class Soundboard(commands.Cog):
         row = self.clone_ready(user_id)
         if not row:
             return None, "that person hasn't opted in or uploaded a sample"
-        url = (self.db.get("clone_api_url") or "").rstrip("/")
+        url, token = self.clone_endpoint()
         if not url:
-            return None, "voice clone service not configured (panel → Robot Voice & Clones)"
+            return None, "voice clone service not installed (YunoHost → SiegeBot → Configuration → Plugins) or configured (panel → Plugins)"
         form = aiohttp.FormData()
         form.add_field("text", text[:400])
         form.add_field("exaggeration", str(self.db.get("clone_exaggeration")))
@@ -140,7 +147,7 @@ class Soundboard(commands.Cog):
         try:
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=240)) as http:
                 async with http.post(url + "/synthesize", data=form,
-                                     headers={"X-Token": self.db.get("clone_api_token") or ""}) as r:
+                                     headers={"X-Token": token}) as r:
                     if r.status != 200:
                         return None, f"clone service said {r.status}: {(await r.text())[:100]}"
                     audio = await r.read()

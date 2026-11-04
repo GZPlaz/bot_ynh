@@ -4,7 +4,7 @@ id = "siegebot"
 name = "SiegeBot"
 description.en = "Sarcastic Discord moderation bot for R6 Siege communities, with a web admin panel"
 
-version = "2.0.0~ynh1"
+version = "3.0.0~ynh1"
 
 maintainers = []
 
@@ -44,6 +44,12 @@ ram.runtime = "100M"
     ask.en = "Your Discord user ID(s), comma separated (unlocks the secret troll commands)"
     type = "string"
 
+    [install.clone_service]
+    ask.en = "Also install the voice clone service (opt-in AI voice clones)?"
+    help.en = "Heavy: needs about 4 GB of free RAM and 6 GB of disk, and adds 10+ minutes to the install. Runs on CPU (10-40 s per sentence). You can add or remove it later under Applications → SiegeBot → Configuration → Plugins, or point the bot at a GPU machine instead (see INSTALL.md)."
+    type = "boolean"
+    default = false
+
 [resources]
     [resources.system_user]
 
@@ -53,8 +59,14 @@ ram.runtime = "100M"
 
     [resources.permissions]
     main.url = "/"
+    leaderboard.url = "/public"
+    leaderboard.allowed = "visitors"
+    leaderboard.show_tile = false
+    leaderboard.auth_header = false
 
     [resources.ports]
+    main.default = 8095
+    clone.default = 8765
 
     [resources.apt]
     packages = "python3-venv, python3-pip, ffmpeg, libopus0, espeak-ng"

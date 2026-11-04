@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block body %}
+<h1>🧩 Plugins</h1>
+<p class="muted">Optional add-ons. They need system-level installation, so they're switched on and off from YunoHost, not from here
+(the bot runs as a locked-down user that can't install software, on purpose).</p>
+
+<div class="card">
+  <h3 style="margin-top:0">🧬 Voice clone service</h3>
+  <p>Powers opt-in AI voice clones (<code>/voiceclone</code>, <code>/mimic</code>). Needs about 4 GB RAM and 6 GB disk on CPU.</p>
+  <p>Status:
+  {% if clone_url %}<span class="pill on-pill">configured</span> {{ clone_url }} <small>(via {{ clone_source }})</small>
+  {% else %}<span class="pill off-pill">not installed</span>{% endif %}</p>
+  <form method="post" action="{{ base }}/clones/test?back=/plugins"><button class="ghost">Test connection</button></form>
+
+  <h4>Install or remove it on this server</h4>
+  <p><b>Web admin:</b> Applications → <b>SiegeBot</b> → <b>Configuration</b> → <b>Plugins</b> → toggle <i>Voice clone service</i> → Save.
+  Installing takes 10+ minutes. Turning it off uninstalls it and frees the disk space; opted-in voice samples are kept.</p>
+  <p><b>Command line:</b></p>
+  <pre style="background:#0f1115;border:1px solid var(--line);border-radius:6px;padding:10px;overflow-x:auto">sudo yunohost app config set {{ app_id }} main.plugins.clone_service -v 1   # install
+sudo yunohost app config set {{ app_id }} main.plugins.clone_service -v 0   # remove</pre>
+
+  <h4>Or use a faster machine</h4>
+  <p>Run the service on a gaming PC with a GPU (INSTALL.md, section 6b), then set its URL and token under
+  <a href="{{ base }}/settings/voice">Robot Voice &amp; Clones</a>. A URL set there overrides the YunoHost plugin.</p>
+</div>
+{% endblock %}
