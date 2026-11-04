@@ -18,7 +18,9 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 PrivateDevices=yes
 ProtectSystem=full
-ProtectHome=yes
+# The data dir lives under /home/yunohost.app: keep /home read-only except for it
+ProtectHome=read-only
+ReadWritePaths=__DATA_DIR__
 ProtectControlGroups=yes
 ProtectKernelModules=yes
 ProtectKernelTunables=yes
