@@ -580,6 +580,11 @@ def create_app(db, ctl, data_dir, base_path):
             os.remove(s["file"])
         go("/sounds", "Deleted." if s and not s["builtin"] else "Built-in sounds can't be deleted.")
 
+    @routes.get("/docs")
+    async def docs_get(request):
+        from .docs import build
+        return render("docs.html", request, d=build(), sections_docs=SECTIONS, prefix=db.get("prefix"))
+
     @routes.get("/logs")
     async def logs_get(request):
         kind = request.query.get("kind")

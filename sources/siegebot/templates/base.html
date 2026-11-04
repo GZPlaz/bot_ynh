@@ -29,13 +29,18 @@ th{color:var(--muted);font-weight:600;font-size:13px}
 .on-pill{background:var(--good);color:#fff}.off-pill{background:var(--bad);color:#fff}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.inline{display:inline}
 .checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px}.checks label{font-weight:400;margin:0}
-@media(max-width:760px){.wrap{display:block}nav{width:auto;border-right:0;border-bottom:1px solid var(--line)}main{padding:16px}}
+.docs h2{margin-top:34px;padding-top:8px;border-top:1px solid var(--line)}.docs h3{margin-bottom:4px}
+.docs p,.docs li{max-width:78ch}.docs code{background:#232835;padding:1px 5px;border-radius:4px;font-size:13px}
+.toc{columns:2;column-gap:24px}.toc a{display:block;padding:2px 0}
+.note{border-left:3px solid var(--accent);padding:8px 12px;background:#1d1a12;border-radius:0 8px 8px 0;margin:10px 0}
+@media(max-width:760px){.docs table{display:block;overflow-x:auto}.toc{columns:1}.docs td[style*=nowrap]{white-space:normal!important}.wrap{display:block}nav{width:auto;border-right:0;border-bottom:1px solid var(--line)}main{padding:16px}}
 </style>
 </head>
 <body><div class="wrap">
 <nav>
   <div class="logo">Siege<span>Bot</span></div>
   <a href="{{ base }}/" class="{{ 'on' if path == '/' }}">Dashboard</a>
+  <a href="{{ base }}/docs" class="{{ 'on' if path == '/docs' }}">📖 Documentation</a>
   <div class="sep">Configure</div>
   {% for key, s in sections.items() if key not in ('trollcfg', 'security', 'logging', 'moderation', 'voice') %}
   <a href="{{ base }}/settings/{{ key }}" class="{{ 'on' if path == '/settings/' ~ key }}">{{ s[0] }}</a>

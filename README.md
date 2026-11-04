@@ -3,6 +3,8 @@
 A sarcastic Discord bot for an R6 Siege community: real moderation, R6 fun commands, and a ~~secret~~ **classified**
 troll engine for griefing your friends. It comes with a web admin panel on your YunoHost server.
 
+> 📘 **Full installation guide: [INSTALL.md](INSTALL.md)**. Once installed, the admin panel has a complete 📖 Documentation page.
+
 ## 1. Create the Discord bot
 1. Go to <https://discord.com/developers/applications> → **New Application** → **Bot** → **Reset Token**, and copy the token.
 2. On the same **Bot** page, enable **Server Members Intent** and **Message Content Intent**. *(If you skip this, the bot won't log in.)*

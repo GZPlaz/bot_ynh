@@ -1,0 +1,4 @@
+- Admin panel: https://__DOMAIN____PATH__ (has a full **📖 Documentation** page)
+- Logs: `sudo journalctl -u __APP__ -f`
+- Data (database, sounds, opt-in voice samples): `__DATA_DIR__`
+- Optional voice-clone service: see `clone_server/` and section 6 of INSTALL.md in the repository.

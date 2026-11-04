@@ -1,0 +1,177 @@
+{% extends "base.html" %}{% block body %}
+<div class="docs">
+<h1>📖 SiegeBot Documentation</h1>
+<p class="muted">Everything the bot can do and how to drive it. The command, troll and settings lists below are generated from the code, so they're always current.</p>
+<div class="note">🔒 This page lists the secret troll features. It's only visible behind YunoHost login, so <b>don't</b> make the panel public or share screenshots of it with your victims.</div>
+
+<div class="card toc">
+  <a href="#start">1. Quick start</a><a href="#panel">2. Panel tour</a><a href="#chat">3. Personality &amp; chat features</a>
+  <a href="#commands">4. Slash commands</a><a href="#automod">5. Automod &amp; heat</a><a href="#security">6. Security</a>
+  <a href="#logging">7. Logging</a><a href="#cases">8. Cases</a><a href="#trolls">9. 🤫 Troll engine</a>
+  <a href="#secret">10. 🤫 Secret chat commands</a><a href="#sound">11. Soundboard &amp; robot voice</a><a href="#clones">12. Voice clones</a>
+  <a href="#settings">13. Settings reference</a><a href="#perms">14. Permissions checklist</a><a href="#faq">15. Troubleshooting</a>
+</div>
+
+<h2 id="start">1. Quick start</h2>
+<ol>
+  <li>Check the <a href="{{ base }}/">Dashboard</a> says <span class="pill on-pill">ONLINE</span>. If not, see <a href="#faq">Troubleshooting</a>.</li>
+  <li>Make sure the bot's role is <b>at the top</b> of Server Settings → Roles (just under yours). Almost every "Discord said no" error comes from this.</li>
+  <li>Set the <b>mod log</b> channel in <a href="{{ base }}/settings/moderation">Automod</a> and the <b>event log</b> channel in <a href="{{ base }}/settings/logging">Logging</a>.</li>
+  <li>Add your trusted mods to the whitelist in <a href="{{ base }}/settings/security">Security</a> so anti-nuke never punishes them.</li>
+  <li>Add your first victim in <a href="{{ base }}/trolls">Troll Control</a>. 😈</li>
+</ol>
+
+<h2 id="panel">2. Panel tour</h2>
+<table>
+  <tr><td><b>Dashboard</b></td><td>Bot status, restart/stop, 🚨 panic button, per-server raid mode and lockdown buttons, recent activity.</td></tr>
+  <tr><td><b>General</b></td><td>Bot token, owner IDs, the custom command prefix, "Watching…" status, welcome message.</td></tr>
+  <tr><td><b>Personality</b></td><td>Every sarcastic line the bot says, plus roasts, strats and 8-ball answers.</td></tr>
+  <tr><td><b>Commands &amp; Responders</b></td><td>Your own <code>{{ prefix }}commands</code> and keyword auto-replies.</td></tr>
+  <tr><td><b>Automod / Security / Logging</b></td><td>Protection settings (sections 5–7).</td></tr>
+  <tr><td><b>Cases</b></td><td>Every moderation action, searchable. Also current quarantines and temp-bans.</td></tr>
+  <tr><td><b>Speak as Bot</b></td><td>Send a message to any channel as the bot.</td></tr>
+  <tr><td><b>Logs</b></td><td>The bot's own activity log (bot, mod, troll, sound, clone, error).</td></tr>
+  <tr><td><b>Troll Control / Soundboard / Robot Voice &amp; Clones / Troll Arsenal</b></td><td>The classified stuff (sections 9–12).</td></tr>
+</table>
+
+<h2 id="chat">3. Personality &amp; chat features</h2>
+<ul>
+  <li><b>Sass:</b> ping the bot or reply to it and it answers with a random sarcastic line (3 s cooldown per person). "good bot" and "bad bot" get their own replies.</li>
+  <li><b>Custom commands:</b> <code>{{ prefix }}name</code> → your response. <code>{{ prefix }}help</code> lists them.</li>
+  <li><b>Auto-responders:</b> reply when a message contains or exactly matches a trigger, with an optional % chance.</li>
+  <li><b>Welcome message</b> in the channel of your choice.</li>
+</ul>
+<p>Placeholders usable in responses and lines:</p>
+<table>
+  <tr><td><code>{user}</code></td><td>display name of the author</td></tr><tr><td><code>{mention}</code></td><td>@mention of the author</td></tr>
+  <tr><td><code>{server}</code></td><td>server name</td></tr><tr><td><code>{args}</code></td><td>text after a custom command</td></tr>
+  <tr><td><code>{target}</code></td><td>first @mention in the message (or the author); the victim in troll lines</td></tr>
+  <tr><td><code>{op}</code></td><td>a random R6 operator</td></tr>
+</table>
+<p class="muted">@everyone, @here and role pings are always blocked in bot output.</p>
+
+<h2 id="commands">4. Slash commands</h2>
+<p>Moderation commands are hidden from members who lack the listed permission. You can change that in Server Settings → Integrations → SiegeBot.</p>
+{% for cat in ['Moderation', 'Security', 'Fun', 'Voice clones'] %}
+<h3>{{ cat }}</h3>
+<table><tr><th>Command</th><th>What it does</th><th>Who</th></tr>
+{% for c in d.commands if c.category == cat %}<tr><td style="white-space:nowrap"><code>{{ c.name }}</code> <small>{{ c.params }}</small></td><td>{{ c.desc }}</td><td><small>{{ c.perms }}</small></td></tr>{% endfor %}
+</table>
+{% endfor %}
+<p class="muted">Durations look like <code>30s</code>, <code>10m</code>, <code>2h</code>, <code>7d</code>, <code>1w</code>, or combined, like <code>1h30m</code>. <code>/ban</code> with a duration is a temp-ban that lifts itself.</p>
+
+<h2 id="automod">5. Automod &amp; heat</h2>
+<p>Automod skips owners, the server owner, whitelisted users and roles, exempt roles, and anyone with Manage Messages.</p>
+<h3>Filters</h3>
+<p>Banned words (whole-word), Discord invites, mass mentions, non-allowlisted links, ALL CAPS. Hitting a filter deletes the message and adds a <b>warning</b>.
+Every <i>N</i> warnings (setting "Warnings before auto-timeout") triggers an automatic timeout.</p>
+<h3>🔥 Heat anti-spam</h3>
+<p>Each message adds heat: a base amount, plus extra per mention, link, attachment, emoji and line break, and a big bonus for repeating yourself.
+Heat cools down continuously. When someone crosses the <b>heat limit</b>, the bot deletes their last 20 seconds of messages and applies the chosen punishment.
+Repeat offenders get longer timeouts (base × strike count).</p>
+<p class="muted">Tuning: with the defaults (10 per message, 12/s cooldown, limit 100), about 10 messages in quick succession triggers it, and normal chat never does. Raise the limit if it's too twitchy.</p>
+
+<h2 id="security">6. Security</h2>
+<h3>🛡️ Anti-nuke</h3>
+<p>Watches the audit log. If an <b>untrusted</b> member or bot does too many of these within the window, they're punished (quarantine, strip roles, kick or ban) and owners get a DM:</p>
+<p>channel delete / create · role delete / create · ban · kick · webhook create</p>
+<p>With <b>Auto-revert</b> on, the bot then re-creates deleted channels and roles, deletes spam channels and roles, and unbans mass-banned users.
+Re-created roles come back empty, so you'll need to reassign members.</p>
+<p>Always on (when enabled): bots added by untrusted members are kicked, and dangerous permissions (Administrator, Ban, Kick, Manage Server/Roles/Channels/Webhooks, Mention Everyone) granted by untrusted users are reverted.</p>
+<div class="note">Trusted = bot owners, the server owner, and the <b>whitelist</b> (Security page or <code>/whitelist add</code>). Anti-nuke can only punish people whose highest role is <b>below</b> the bot's.</div>
+<h3>🚨 Anti-raid</h3>
+<p>If <i>X</i> people join within <i>Y</i> seconds, raid mode switches on for the configured time. Everyone joining during raid mode gets the raid action, and optionally the whole server locks down.
+You can also force it with <code>/raidmode</code> or the dashboard. Separately, you can act on accounts younger than <i>N</i> days or with no avatar. Kicked or banned joiners get a DM explaining why.</p>
+<h3>✅ Verification</h3>
+<ol>
+  <li>Create a "Verified" role. In each channel (or category), deny <b>View Channel</b> to @everyone and allow it for Verified. Leave one #verify channel visible to everyone.</li>
+  <li>In <a href="{{ base }}/settings/security">Security</a>, enable verification and pick the role.</li>
+  <li>In #verify, run <code>/verifypanel</code>. New members click the button and answer a quick math captcha to get the role.</li>
+</ol>
+<h3>☣️ Quarantine</h3>
+<p>Strips all roles (remembered), adds a "Quarantined" role that can't see any channel, and kicks them out of voice. <code>/unquarantine</code> or the Cases page restores their roles.
+The role is created automatically the first time you use it, and new channels hide from it automatically.</p>
+<h3>🔒 Lockdown</h3>
+<p><code>/lock</code> and <code>/unlock</code> work on one channel; <code>/lockdown on|off</code> covers every text channel. The previous permissions are remembered and restored exactly.</p>
+
+<h2 id="logging">7. Logging</h2>
+<p>Pick an event log channel and toggle categories: message edits and deletes, joins and leaves (with account age and a ⚠️ for new accounts), bans and unbans, nicknames, timeouts, role changes, voice joins/leaves/moves, and channel create/delete.</p>
+<p><b>👻 Ghost-ping detector:</b> if someone deletes a message that pinged a person within 60 seconds, the bot calls them out in the channel.</p>
+<p class="muted">Messages the bot deletes itself (automod, purge, your secret commands) and everything the troll engine does are kept out of the logs automatically.</p>
+
+<h2 id="cases">8. Cases</h2>
+<p>Every warn, timeout, kick, ban, temp-ban, softban, quarantine, anti-nuke punishment and note gets a numbered case.
+In Discord: <code>/modlogs @user</code>, <code>/case 42</code>, <code>/note</code>. In the panel, the Cases page lets you filter by action or user, remove cases, release quarantines and see temp-bans.</p>
+
+<h2 id="trolls">9. 🤫 Troll engine</h2>
+<h3>How it works</h3>
+<ul>
+  <li>Add a <b>target</b> in Troll Control, pick which trolls apply, and set their <b>chance</b> (%).</li>
+  <li><b>Message trolls</b> roll <code>chance × chaos</code> on every message the target sends.</li>
+  <li>The <b>timed loop</b> (every N minutes) rolls the same odds and picks one active troll. Voice trolls only fire if they're in voice; the harsher ones are rarer.</li>
+  <li>Any troll can be fired manually with <b>Fire 🚀</b> on the Troll Control page, or with a <a href="#secret">secret command</a>.</li>
+  <li><b>Chaos</b> (0–5) scales everything. 0 means only manual trolls.</li>
+  <li>The <b>🚨 Panic button</b> (dashboard, or <code>,,panic</code>) turns trolling off and undoes everything reversible: nicknames, shame roles, target timeouts and potato channels.</li>
+  <li>Bot owners are immune to everything and always win <code>/stats</code>, <code>/clutch</code> and <code>/roast</code>.</li>
+</ul>
+<h3>All {{ d.trolls|length }} trolls</h3>
+<table><tr><th>Troll</th><th>What it does</th><th>Fires</th></tr>
+{% for t in d.trolls %}<tr><td style="white-space:nowrap"><code>{{ t.key }}</code>{% if t.voice %} 🎙️{% endif %}</td><td>{{ t.desc }}</td><td><small>{{ t.kind }}</small></td></tr>{% endfor %}
+</table>
+<p class="muted">🎙️ = needs the target in a voice channel. Most need the bot's role above theirs; micro-timeouts can't hit admins.</p>
+
+<h2 id="secret">10. 🤫 Secret chat commands</h2>
+<p>Only bot owners (General → Owner IDs) can use these. Type them in any channel: the message is deleted instantly and never appears in the logs.</p>
+<table>{% for cmd, desc in d.hidden %}<tr><td style="white-space:nowrap"><code>{{ cmd }}</code></td><td>{{ desc }}</td></tr>{% endfor %}</table>
+
+<h2 id="sound">11. Soundboard &amp; robot voice</h2>
+<p>The bot joins a call, plays, and leaves. Built-in sounds are synthesized originals, not game audio:</p>
+<table>{% for name, desc in d.builtin_sounds.items() %}<tr><td><code>{{ name }}</code></td><td>{{ desc }}</td></tr>{% endfor %}</table>
+<ul>
+  <li><b>Upload</b> your own clips (mp3/wav/ogg/opus/m4a/flac/webm, up to 8 MB). Recorded fake callouts work great.</li>
+  <li><b>Volume</b> above 100% clips and distorts on purpose. <b>Max length</b> caps any clip.</li>
+  <li><b>Target a member</b> to follow them into whatever channel they're in.</li>
+  <li><b>Robot voice (text-to-speech):</b> type anything and pick a voice. "The target's personal robot voice" is the same voice the <code>read_aloud</code> troll uses for that person, so they'll learn to fear it.</li>
+</ul>
+
+<h2 id="clones">12. 🧬 Voice clones (opt-in only)</h2>
+<ol>
+  <li>A member runs <code>/voiceclone optin</code>, reads the explanation and chooses who may use their voice: bot owners only, or everyone.</li>
+  <li>They upload 10–30 s of their own voice with <code>/voiceclone sample</code>. A Discord voice message works; clear speech, no game audio.</li>
+  <li>Use it with <code>/mimic</code>, <code>,,clone @user text</code>, or the voice picker on the Soundboard.</li>
+  <li><code>/voiceclone optout</code> deletes the sample instantly. You can also delete clones from the Soundboard page.</li>
+</ol>
+<div class="note">Nobody can upload someone else's voice, including from this panel. The clone service adds an inaudible AI watermark, and <code>/mimic</code> labels its output in chat as AI.</div>
+<p>Cloning needs the separate clone service (<code>clone_server/</code> in the repo, roughly 4 GB RAM; a GPU makes it fast). Set its URL and token in
+<a href="{{ base }}/settings/voice">Robot Voice &amp; Clones</a>, then press <i>Test clone service</i> on the Soundboard. Setup steps are in <code>INSTALL.md</code>.</p>
+
+<h2 id="settings">13. Settings reference</h2>
+{% for key, s in sections_docs.items() %}
+<h3><a href="{{ base }}/settings/{{ key }}">{{ s[0] }}</a></h3>
+<p class="muted">{{ s[1] }}</p>
+<table>{% for f in s[2] %}<tr><td style="width:34%"><b>{{ f.label }}</b><br><small><code>{{ f.key }}</code></small></td><td>{{ f.help or '' }}{% if f.choices %} <small>Options: {{ f.choices|join(', ') }}</small>{% endif %}</td></tr>{% endfor %}</table>
+{% endfor %}
+
+<h2 id="perms">14. Permissions checklist</h2>
+<ul>
+  <li><b>Developer portal → Bot:</b> Server Members Intent ✅ and Message Content Intent ✅.</li>
+  <li><b>Invite permissions:</b> Administrator. That's the easy route; anti-nuke, quarantine, lockdown, voice jail and potato mode all need management permissions.</li>
+  <li><b>Role position:</b> the bot's role must be above everyone it should moderate, rename, mute or quarantine.</li>
+  <li><b>Server owner:</b> Discord never lets bots act on the server owner. That's a Discord rule, not a bug.</li>
+</ul>
+
+<h2 id="faq">15. Troubleshooting</h2>
+<table>
+  <tr><td><b>Dashboard: "LoginFailure / Improper token"</b></td><td>Reset the token in the developer portal and paste it into General.</td></tr>
+  <tr><td><b>"PrivilegedIntentsRequired"</b></td><td>Enable both intents (section 14), then click Restart.</td></tr>
+  <tr><td><b>Slash commands don't show up</b></td><td>They sync when the bot starts. Restart it, then reload Discord (Ctrl+R). Check the bot was invited with the <code>applications.commands</code> scope.</td></tr>
+  <tr><td><b>"Discord said no" / nickname or mute doesn't work</b></td><td>Role position (section 14), or the target is the server owner.</td></tr>
+  <tr><td><b>Bot joins voice but there's no sound</b></td><td>Check the Logs page for "playback failed". On the server: <code>sudo apt install ffmpeg libopus0</code>, then upgrade the app.</td></tr>
+  <tr><td><b>Robot voice says nothing</b></td><td><code>sudo apt install espeak-ng</code>.</td></tr>
+  <tr><td><b>Clone: "service unreachable"</b></td><td>Is the clone service running? Is the URL reachable from the YunoHost box (firewall/port)? Does the token match?</td></tr>
+  <tr><td><b>Clone is very slow</b></td><td>Normal on CPU (10–40 s per sentence). Run the clone service on a machine with a GPU (<code>--device cuda</code>).</td></tr>
+  <tr><td><b>Anti-nuke punished a real mod</b></td><td>Whitelist them (or their role) in Security, then release them from Cases → Quarantined.</td></tr>
+  <tr><td><b>Server logs</b></td><td><code>sudo journalctl -u siegebot -f</code></td></tr>
+</table>
+</div>
+{% endblock %}
