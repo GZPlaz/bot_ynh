@@ -72,7 +72,7 @@ jail, a robot voice yelling fake callouts in their call, and potato mode (their 
 Robot-voice chaos: every victim gets their own personal robot voice, which **reads their text messages aloud** while they're in voice.
 A **join announcer** greets them ("Please lower your expectations"), a **sports commentator** narrates the moment they type "dead",
 "rip" or "my bad", and the robot can **read their stats to the whole call**. Trolls fire at random based on
-*chance × chaos*, from a timed loop, or on demand from the panel. As an owner you can also type secret `,,` commands in chat; the bot deletes
+*chance × chaos*, from a timed loop, or on demand from the panel. Bot owners **and server admins** (configurable) can also type secret `,,` commands in chat (owners stay immune to them, and admin use is logged); the bot deletes
 them instantly (`,,help` DMs you the list).
 The 🚨 **Panic button** turns everything off and restores everyone's nicknames.
 

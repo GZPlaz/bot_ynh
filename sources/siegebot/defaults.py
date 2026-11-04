@@ -266,6 +266,8 @@ DEFAULTS = {
     "sound_max_seconds": 20,
     # trolls
     "trolls_enabled": True,
+    "troll_access": "admins",   # who can use the secret ,, commands besides bot owners: "owners" or "admins"
+    "troll_role_id": "",        # optional extra role that may use them
     "chaos": 1.0,
     "troll_loop_minutes": 15,
     "cursed_ops": CURSED_OPS,

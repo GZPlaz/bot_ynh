@@ -111,7 +111,9 @@ SECTIONS = {
         ("tier_max_pending", "int", "Max pending suggestions per person", ""),
         ("public_leaderboard", "bool", "Public leaderboard page", "Read-only tier list at <your panel URL>/public/leaderboard with no login. Shows only names and tiers."),
     ]),
-    "trollcfg": ("Troll Arsenal", "The content used by the secret trolls.", [
+    "trollcfg": ("Troll Arsenal", "Who gets the secret commands, and the content the trolls use.", [
+        ("troll_access", "choice", "Who can use the secret ,, commands", "Bot owners always can. 'admins' also lets every member with the Administrator permission use them. Bot owners stay immune either way, and every use by a non-owner is logged (Logs → troll).", ["admins", "owners"]),
+        ("troll_role_id", "role", "Also allow this role", "Optional, e.g. a 'Troll Council' role."),
         ("nicknames", "lines", "Humiliating nicknames", "Max 32 characters each."),
         ("reactions", "lines", "Reaction emojis", ""),
         ("cursed_ops", "lines", "Cursed /operator picks", ""),
