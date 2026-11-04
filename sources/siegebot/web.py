@@ -102,6 +102,10 @@ SECTIONS = {
         ("fake_ban_reveal", "lines", "Fake ban 'jk' follow-ups", ""),
         ("dm_reports", "lines", "Fake report DMs", ""),
         ("corrections", "dict", "Autocorrect replacements", "word = replacement, one per line."),
+        ("sniper_lines", "lines", "Typing-sniper lines", "Use {user}."),
+        ("timeout_reasons", "lines", "Micro-timeout reasons", ""),
+        ("shame_role_names", "lines", "Role-of-shame names", "Max 100 characters."),
+        ("shame_minutes", "int", "Role of shame lasts (minutes)", ""),
     ]),
 }
 SECTIONS = {k: (t, i, [dict(zip(("key", "typ", "label", "help", "choices"), f + (None,) * (5 - len(f)))) for f in fs])
@@ -342,7 +346,7 @@ def create_app(db, ctl, data_dir, base_path):
         if action not in ACTIONS:
             go("/trolls", "Unknown action.")
         ch = b.get_channel(int(f["channel"])) if f.get("channel", "").isdigit() else None
-        if action in ("fake_ban", "voice_shuffle", "voice_mute"):
+        if action in ("fake_ban", "voice_shuffle", "voice_mute", "ping_spree", "sound_ambush", "noise_blast"):
             b.loop.create_task(cog.run_action(action, m, ch))  # these take a while, run in background
             go("/trolls", f"{ACTIONS[action]} launched at {m.display_name}. 🚀")
         result = await cog.run_action(action, m, ch)

@@ -10,7 +10,8 @@ DEFENDERS = ["Smoke", "Mute", "Castle", "Pulse", "Doc", "Rook", "Kapkan", "Tacha
              "Thorn", "Azami", "Solis", "Fenrir", "Tubarão", "Sentry", "Skopós"]
 
 TROLL_TYPES = ["react", "mock", "typing", "correct", "nickname", "ghost_ping", "fake_ban", "voice_shuffle",
-               "voice_mute", "fake_stats", "cursed_ops", "dm_report", "sound_ambush", "noise_blast"]
+               "voice_mute", "fake_stats", "cursed_ops", "dm_report", "sound_ambush", "noise_blast",
+               "nick_lock", "micro_timeout", "voice_kick", "role_of_shame", "typing_sniper", "parrot", "ping_spree"]
 
 TROLL_DESCRIPTIONS = {
     "react": "Randomly reacts to their messages with clowns, salt and skulls",
@@ -27,6 +28,13 @@ TROLL_DESCRIPTIONS = {
     "dm_report": "DMs them a totally official 'report received' notice",
     "sound_ambush": "Bot sneaks into their voice call and plays a fake cue (footsteps, drone, defuser...)",
     "noise_blast": "Bot joins their voice call and blasts the loudest noise in the arsenal",
+    "nick_lock": "Once renamed, changing their nickname back instantly gets them a NEW humiliating one",
+    "micro_timeout": "Real 30-90 second timeout with an absurd reason. Always mid-argument.",
+    "voice_kick": "Disconnects them from voice. Mid-clutch, ideally.",
+    "role_of_shame": "Hoisted hot-pink role like '🤡 Certified Bottom Frag' for 30 minutes, shown at the top of the member list",
+    "typing_sniper": "The moment they start typing, the bot replies 'nobody asked' before they can send",
+    "parrot": "For 3 minutes the bot repeats every single thing they say",
+    "ping_spree": "Ghost-pings them in up to 5 channels in a row. Unread badges everywhere.",
 }
 
 SASS_LINES = [
@@ -113,6 +121,23 @@ DM_REPORTS = [
     "Category: *Disrespecting the Hostage*. Our review team has concluded: you are bad. No further action.",
     "📨 **Notice of Skill Review (very official)**\nYour recent performance has been flagged as 'concerning'. "
     "Please practice in Terrorist Hunt for 400 hours and try again.",
+]
+
+SNIPER_LINES = [
+    "Nobody asked, {user}.", "Whatever you're typing: wrong.", "Put the keyboard down, {user}.",
+    "I can see you typing. Reconsider.", "Before you send that: no.", "Typing that long? Must be an excuse for last round.",
+    "Let me guess: 'it was lag'.", "{user} is typing... and the server collectively sighs.",
+]
+
+TIMEOUT_REASONS = [
+    "Skill issue", "Spawn peeked one too many times", "Crimes against the hostage", "Excessive coping",
+    "Reinforced the wrong wall (again)", "Team-flashed the entire squad", "Said 'he's one shot' about a full-HP enemy",
+    "Bottom fragged with Recruit", "Being Copper in spirit",
+]
+
+SHAME_ROLE_NAMES = [
+    "🤡 Certified Bottom Frag", "🧂 Professional Coper", "📉 Negative K/D Club", "🐌 Slowest Rotate Alive",
+    "🗑️ Spawn Peek Victim", "🥉 Copper V (Hardstuck)", "🙈 Has Never Droned", "💀 Dies First Every Round",
 ]
 
 CORRECTIONS = {
@@ -213,4 +238,10 @@ DEFAULTS = {
     "fake_ban_reveal": FAKE_BAN_REVEAL,
     "dm_reports": DM_REPORTS,
     "corrections": CORRECTIONS,
+    "sniper_lines": SNIPER_LINES,
+    "timeout_reasons": TIMEOUT_REASONS,
+    "shame_role_names": SHAME_ROLE_NAMES,
+    "shame_minutes": 30,
+    "shame_roles": {},     # guild_id -> role_id
+    "shame_expiry": {},    # "guild:user" -> ts
 }

@@ -4,6 +4,7 @@ import logging
 import random
 import re
 import time
+from datetime import timedelta
 
 import discord
 from discord.ext import commands
@@ -13,18 +14,23 @@ from .util import chance, fill, spongebob
 
 log = logging.getLogger("siegebot.trolls")
 
-PASSIVE = ["react", "mock", "typing", "correct"]
-ACTIVE = ["nickname", "ghost_ping", "fake_ban", "voice_shuffle", "voice_mute", "dm_report", "sound_ambush", "noise_blast"]
-VOICE_ACTIONS = ("voice_shuffle", "voice_mute", "sound_ambush", "noise_blast")
+PASSIVE = ["react", "mock", "typing", "correct", "parrot"]
+ACTIVE = ["nickname", "ghost_ping", "fake_ban", "voice_shuffle", "voice_mute", "dm_report", "sound_ambush", "noise_blast",
+          "micro_timeout", "voice_kick", "role_of_shame", "ping_spree", "parrot"]
+VOICE_ACTIONS = ("voice_shuffle", "voice_mute", "sound_ambush", "noise_blast", "voice_kick")
+RARE = ("fake_ban", "dm_report", "micro_timeout", "voice_kick", "role_of_shame")
 ACTIONS = {
     "nickname": "Rename", "restore_nick": "Restore nickname", "ghost_ping": "Ghost ping",
     "fake_ban": "Fake ban", "voice_shuffle": "Voice shuffle", "voice_mute": "Voice mute 5s",
     "dm_report": "Fake report DM", "mock_next": "Mock next message",
     "sound_ambush": "Fake cue in their call", "noise_blast": "Noise blast in their call",
+    "micro_timeout": "Micro timeout (30-90s)", "voice_kick": "Kick from voice", "role_of_shame": "Role of shame",
+    "remove_shame": "Remove role of shame", "ping_spree": "Ghost-ping spree", "parrot": "Parrot mode (3 min)",
 }
 HIDDEN = {"nick": "nickname", "unnick": "restore_nick", "ghost": "ghost_ping", "fakeban": "fake_ban",
           "shuffle": "voice_shuffle", "mute": "voice_mute", "report": "dm_report", "mock": "mock_next",
-          "ambush": "sound_ambush", "blast": "noise_blast"}
+          "ambush": "sound_ambush", "blast": "noise_blast", "tout": "micro_timeout", "vkick": "voice_kick",
+          "shame": "role_of_shame", "unshame": "remove_shame", "spree": "ping_spree", "parrot": "parrot"}
 
 
 class Trolls(commands.Cog):
@@ -33,6 +39,9 @@ class Trolls(commands.Cog):
         self.db = bot.db
         self.mock_next = set()
         self.loop_task = None
+        self.parrots = {}  # user_id -> ts until
+        self.sniped = {}  # user_id -> last snipe ts
+        self.renaming = set()  # ids the bot is renaming right now (so nick_lock ignores our own edits)
 
     async def cog_load(self):
         self.loop_task = asyncio.create_task(self.chaos_loop())
@@ -82,14 +91,26 @@ class Trolls(commands.Cog):
         if not t["nick_changed"]:
             self.db.q("UPDATE targets SET original_nick=?, nick_changed=1 WHERE user_id=?", (member.nick, member.id))
         new = random.choice(self.db.get("nicknames"))[:32]
-        await member.edit(nick=new, reason="Totally legitimate moderation")
+        self.renaming.add(member.id)
+        try:
+            await member.edit(nick=new, reason="Totally legitimate moderation")
+        finally:
+            asyncio.get_running_loop().call_later(3, self.renaming.discard, member.id)
         return f"renamed to '{new}'"
 
     async def do_restore_nick(self, member, channel=None):
         t = self.db.target(member.id)
         if not t or not t["nick_changed"]:
             return "nothing to restore"
-        await member.edit(nick=t["original_nick"])
+        self.db.q("UPDATE targets SET nick_changed=0 WHERE user_id=?", (member.id,))  # disarm nick_lock first
+        self.renaming.add(member.id)
+        try:
+            await member.edit(nick=t["original_nick"])
+        except discord.HTTPException:
+            self.db.q("UPDATE targets SET nick_changed=1 WHERE user_id=?", (member.id,))  # keep the saved original
+            raise
+        finally:
+            asyncio.get_running_loop().call_later(3, self.renaming.discard, member.id)
         self.db.q("UPDATE targets SET nick_changed=0, original_nick=NULL WHERE user_id=?", (member.id,))
         return "nickname restored"
 
@@ -146,6 +167,110 @@ class Trolls(commands.Cog):
     async def do_noise_blast(self, member, channel=None):
         return await self.bot.get_cog("Soundboard").play_at(member, "loud")
 
+    async def do_micro_timeout(self, member, channel=None):
+        secs = random.randint(30, 90)
+        reason = random.choice(self.db.get("timeout_reasons"))
+        await member.timeout(timedelta(seconds=secs), reason=reason)
+        return f"timed out {secs}s: {reason}"
+
+    async def do_voice_kick(self, member, channel=None):
+        if not member.voice:
+            return "not in voice"
+        await member.move_to(None, reason="Connection lost (definitely)")
+        return "kicked from voice"
+
+    async def shame_role(self, guild):
+        roles = self.db.get("shame_roles") or {}
+        role = guild.get_role(int(roles.get(str(guild.id), 0)))
+        if not role:
+            role = await guild.create_role(name="🤡", colour=discord.Colour(0xFF2D95), hoist=True,
+                                           permissions=discord.Permissions.none(), reason="Totally normal role")
+            roles[str(guild.id)] = role.id
+            self.db.set("shame_roles", roles)
+        try:  # as high as the bot can put it, so it's what shows in the member list
+            await role.edit(position=max(1, guild.me.top_role.position - 1))
+        except discord.HTTPException:
+            pass
+        return role
+
+    async def do_role_of_shame(self, member, channel=None):
+        role = await self.shame_role(member.guild)
+        name = random.choice(self.db.get("shame_role_names"))[:100]
+        await role.edit(name=name)
+        await member.add_roles(role)
+        mins = int(self.db.get("shame_minutes") or 30)
+        exp = self.db.get("shame_expiry") or {}
+        exp[f"{member.guild.id}:{member.id}"] = time.time() + mins * 60
+        self.db.set("shame_expiry", exp)
+        asyncio.get_running_loop().call_later(mins * 60 + 1, lambda: asyncio.ensure_future(self.expire_shame()))
+        return f"wearing '{name}' for {mins} min"
+
+    async def do_remove_shame(self, member, channel=None):
+        exp = self.db.get("shame_expiry") or {}
+        exp.pop(f"{member.guild.id}:{member.id}", None)
+        self.db.set("shame_expiry", exp)
+        role = member.guild.get_role(int((self.db.get("shame_roles") or {}).get(str(member.guild.id), 0)))
+        if role and role in member.roles:
+            await member.remove_roles(role)
+            return "role of shame removed"
+        return "wasn't wearing it"
+
+    async def expire_shame(self, everything=False):
+        exp = self.db.get("shame_expiry") or {}
+        for key, until in list(exp.items()):
+            if everything or until <= time.time():
+                gid, uid = key.split(":")
+                guild = self.bot.get_guild(int(gid))
+                member = guild.get_member(int(uid)) if guild else None
+                if member:
+                    self.bot.stealth[member.id] = time.time() + 30
+                    try:
+                        await self.do_remove_shame(member)
+                    except discord.HTTPException:
+                        pass
+                exp.pop(key, None)
+        self.db.set("shame_expiry", exp)
+
+    async def do_ping_spree(self, member, channel=None):
+        chans = [c for c in self.sendable_channels(member.guild) if c.permissions_for(member).view_channel]
+        chans = random.sample(chans, k=min(5, len(chans)))
+        for ch in chans:
+            msg = await ch.send(member.mention)
+            await msg.delete()
+            await asyncio.sleep(random.uniform(2, 6))
+        return f"ghost-pinged in {len(chans)} channels"
+
+    async def do_parrot(self, member, channel=None):
+        self.parrots[member.id] = time.time() + 180
+        return "parrot mode for 3 minutes"
+
+    # nick_lock: they changed it back? new humiliating name.
+    @commands.Cog.listener()
+    async def on_member_update(self, before, after):
+        if before.nick == after.nick or after.id in self.renaming or not self.enabled():
+            return
+        t = self.db.target(after.id)
+        if not t or "nick_lock" not in t["trolls"] or not t["nick_changed"]:
+            return
+        await asyncio.sleep(random.uniform(1, 4))  # let them enjoy it for a moment
+        await self.run_action("nickname", after)
+
+    # typing_sniper: reply before they even hit enter
+    @commands.Cog.listener()
+    async def on_typing(self, channel, user, when):
+        if not getattr(channel, "guild", None) or user.bot or not self.enabled():
+            return
+        t = self.db.target(user.id)
+        if not t or "typing_sniper" not in t["trolls"] or time.time() - self.sniped.get(user.id, 0) < 120:
+            return
+        if not chance(self.odds(t, 2)):
+            return
+        self.sniped[user.id] = time.time()
+        try:
+            await channel.send(fill(random.choice(self.db.get("sniper_lines")), user=user.display_name))
+        except discord.HTTPException:
+            pass
+
     async def do_mock_next(self, member, channel=None):
         self.mock_next.add(member.id)
         return "next message will be mocked"
@@ -159,6 +284,24 @@ class Trolls(commands.Cog):
                 m = self.find_member(t["user_id"])
                 if m and "restored" in await self.run_action("restore_nick", m):
                     restored += 1
+        self.parrots.clear()
+        self.mock_next.clear()
+        await self.expire_shame(everything=True)
+        for gid, rid in (self.db.get("shame_roles") or {}).items():
+            guild = self.bot.get_guild(int(gid))
+            role = guild.get_role(int(rid)) if guild else None
+            if role:
+                try:
+                    await role.delete(reason="Cleanup")
+                except discord.HTTPException:
+                    pass
+        self.db.set("shame_roles", {})
+        for m in [self.find_member(t["user_id"]) for t in self.db.targets()]:
+            if m and m.is_timed_out():
+                try:
+                    await m.timeout(None)
+                except discord.HTTPException:
+                    pass
         self.db.log("troll", f"PANIC: trolls disabled, {restored} nickname(s) restored")
         return restored
 
@@ -169,6 +312,12 @@ class Trolls(commands.Cog):
             await message.reply(spongebob(message.content) or "🤡", mention_author=False)
             return
         if not self.enabled():
+            return
+        if self.parrots.get(message.author.id, 0) > time.time() and message.content:
+            try:
+                await message.channel.send(message.content[:2000], allowed_mentions=discord.AllowedMentions.none())
+            except discord.HTTPException:
+                pass
             return
         t = self.db.target(message.author.id)
         if not t:
@@ -190,6 +339,9 @@ class Trolls(commands.Cog):
                 fixed = self.corrupt(message.content)
                 if fixed != message.content:
                     await message.reply(f"*{fixed}", mention_author=False)
+            elif kind == "parrot":
+                self.parrots[message.author.id] = time.time() + 180
+                await message.channel.send(message.content[:2000] or "🦜", allowed_mentions=discord.AllowedMentions.none())
         except discord.HTTPException:
             pass
 
@@ -205,6 +357,7 @@ class Trolls(commands.Cog):
     async def chaos_loop(self):
         await self.bot.wait_until_ready()
         while not self.bot.is_closed():
+            await self.expire_shame()  # in case the bot restarted while someone was wearing it
             await asyncio.sleep(max(1, float(self.db.get("troll_loop_minutes"))) * 60)
             if not self.enabled():
                 continue
@@ -218,14 +371,15 @@ class Trolls(commands.Cog):
                     if not options:
                         continue
                 # the loud ones are rarer
-                weights = [0.3 if o in ("fake_ban", "dm_report") else 1.0 for o in options]
+                weights = [0.3 if o in RARE else 1.0 for o in options]
                 action = random.choices(options, weights=weights)[0]
                 asyncio.create_task(self.run_action(action, member))
 
     # ------------------------------------------------------------------ hidden owner commands
     async def hidden_command(self, message):
         """,,nick @user  ,,ghost @user  ,,fakeban @user  ,,shuffle @user  ,,mute @user  ,,report @user
-        ,,mock @user  ,,unnick @user  ,,ambush @user  ,,blast @user
+        ,,mock @user  ,,unnick @user  ,,ambush @user  ,,blast @user  ,,tout @user  ,,vkick @user
+        ,,shame @user  ,,unshame @user  ,,spree @user  ,,parrot @user
         ,,sound @user <name> [times]   (or ,,sound <name> to play in YOUR channel)  ,,stop  ,,sounds
         ,,target @user  ,,untarget @user  ,,chaos 2  ,,on  ,,off  ,,panic"""
         try:

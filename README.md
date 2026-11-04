@@ -55,7 +55,9 @@ plus custom `!commands` and keyword auto-responders that you manage from the pan
 **Troll engine** (panel → *Troll Control*): add targets and pick their trolls:
 reactions 🤡, sPoNgEbOb mocking, phantom "typing...", fake autocorrect, humiliating nicknames, ghost pings, fake bans, 10-second voice-channel
 shuffles, 5-second server mutes, 🔊 **voice ambushes** (the bot joins their call and plays a fake footstep, drone, defuser or breach cue,
-or the loudest noise in the arsenal), rigged `/stats`, cursed `/operator` picks, and fake "official" report DMs. Trolls fire at random based on
+or the loudest noise in the arsenal), rigged `/stats`, cursed `/operator` picks, and fake "official" report DMs, nickname lock (rename yourself back → new humiliating name), 30–90s micro-timeouts
+with absurd reasons, voice disconnects, a hoisted hot-pink role of shame, a typing sniper ("nobody asked" before they hit enter),
+parrot mode, and ghost-ping sprees across 5 channels. Trolls fire at random based on
 *chance × chaos*, from a timed loop, or on demand from the panel. As an owner you can also type secret `,,` commands in chat; the bot deletes
 them instantly (`,,help` DMs you the list).
 The 🚨 **Panic button** turns everything off and restores everyone's nicknames.
