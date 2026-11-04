@@ -446,8 +446,13 @@ def create_app(db, ctl, data_dir, base_path):
             members = [(str(m.id), f"{m.display_name} in 🔊 {m.voice.channel.name}") for g in b.guilds
                        for m in g.members if m.voice and m.voice.channel and not m.bot]
         clones = db.q("SELECT * FROM voice_clones ORDER BY user_name")
+        if b:
+            b.get_cog("VoiceClone").expire_pending()
+        pending = db.q("SELECT * FROM pending_clones ORDER BY ts DESC")
+        all_members = sorted({(str(m.id), f"{m.display_name} ({m})") for g in (b.guilds if b else []) for m in g.members
+                              if not m.bot}, key=lambda x: x[1].lower())
         return render("sounds.html", request, sounds=sound_lib.list_sounds(data_dir), vchans=vchans, members=members,
-                      clones=clones, clone_url=db.get("clone_api_url"),
+                      clones=clones, clone_url=db.get("clone_api_url"), pending=pending, all_members=all_members,
                       volume=db.get("sound_volume"), max_seconds=db.get("sound_max_seconds"))
 
     @routes.get("/sounds/file/{name}")
@@ -519,11 +524,61 @@ def create_app(db, ctl, data_dir, base_path):
         if b:
             b.get_cog("VoiceClone").delete(int(request.match_info["uid"]))
         else:
+            db.q("DELETE FROM pending_clones WHERE user_id=?", (int(request.match_info["uid"]),))
             row = db.q("SELECT * FROM voice_clones WHERE user_id=?", (int(request.match_info["uid"]),), one=True)
             if row and row["sample"] and os.path.exists(row["sample"]):
                 os.remove(row["sample"])
             db.q("DELETE FROM voice_clones WHERE user_id=?", (int(request.match_info["uid"]),))
         go("/sounds", "Voice clone deleted.")
+
+    @routes.post("/clones/upload")
+    async def clones_upload(request):
+        b = bot()
+        if not b:
+            go("/sounds", "The bot must be online to ask your friend for approval.")
+        reader = await request.multipart()
+        uid, tmp_path = None, None
+        try:
+            async for part in reader:
+                if part.name == "member":
+                    uid = (await part.text()).strip()
+                elif part.name == "file" and part.filename:
+                    ext = os.path.splitext(part.filename)[1].lower() or ".ogg"
+                    if ext not in sound_lib.AUDIO_EXT:
+                        go("/sounds", "Unsupported file type.")
+                    tmp_path = os.path.join(data_dir, f"upload_{os.getpid()}_{time.time_ns()}{ext}")
+                    size = 0
+                    with open(tmp_path, "wb") as fh:
+                        while chunk := await part.read_chunk():
+                            size += len(chunk)
+                            if size > 10 * 1024 * 1024:
+                                go("/sounds", "File too big (max 10 MB).")
+                            fh.write(chunk)
+            member = b.get_cog("Trolls").find_member(uid) if uid and uid.isdigit() else None
+            if not member or not tmp_path:
+                go("/sounds", "Pick a member and an audio file.")
+            msg = await b.get_cog("VoiceClone").submit_for_approval(member, tmp_path, "admin panel")
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        go("/sounds", msg)
+
+    @routes.post("/clones/{uid}/resend")
+    async def clones_resend(request):
+        b = bot()
+        m = b.get_cog("Trolls").find_member(request.match_info["uid"]) if b else None
+        if not m:
+            go("/sounds", "Bot offline or member not found.")
+        go("/sounds", await b.get_cog("VoiceClone").send_request(m))
+
+    @routes.post("/clones/{uid}/cancel")
+    async def clones_cancel(request):
+        uid = int(request.match_info["uid"])
+        row = db.q("SELECT * FROM pending_clones WHERE user_id=?", (uid,), one=True)
+        if row and row["sample"] and os.path.exists(row["sample"]):
+            os.remove(row["sample"])
+        db.q("DELETE FROM pending_clones WHERE user_id=?", (uid,))
+        go("/sounds", "Request cancelled and sample deleted.")
 
     @routes.post("/clones/test")
     async def clones_test(request):

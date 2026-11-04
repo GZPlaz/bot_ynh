@@ -36,7 +36,8 @@
 </div>
 <div class="card">
   <h3 style="margin-top:0">🧬 Voice clones (opt-in only)</h3>
-  <p class="muted">Members opt in with <code>/voiceclone optin</code> and upload their own sample with <code>/voiceclone sample</code>.
+  <p class="muted">Members opt in with <code>/voiceclone optin</code> and upload their own sample with <code>/voiceclone sample</code>,
+  or you upload it below and they approve with one tap.
   <code>/voiceclone optout</code> deletes it. Service: {{ clone_url or 'not configured' }} · <a href="{{ base }}/settings/voice">settings</a></p>
   <form method="post" action="{{ base }}/clones/test"><button class="ghost">Test clone service</button></form>
   <table><tr><th>Member</th><th>Usable by</th><th>Sample</th><th>Uses</th><th></th></tr>
@@ -44,6 +45,24 @@
   <td>{{ '✅' if c.sample else '⏳ waiting for upload' }}</td><td>{{ c.uses }}</td>
   <td><form method="post" action="{{ base }}/clones/{{ c.user_id }}/delete" onsubmit="return confirm('Delete this voice clone?')"><button class="ghost">Delete</button></form></td></tr>
   {% else %}<tr><td colspan="5" class="muted">Nobody has opted in yet. Tell your friends it's hilarious.</td></tr>{% endfor %}</table>
+
+  <h3>Upload a sample for a friend</h3>
+  <p class="muted">For friends who can't be bothered. The bot DMs them the clip with <b>Allow</b> / <b>Delete</b> buttons, and the clone
+  only activates once they tap Allow (one tap, no commands). Unapproved samples are deleted after 7 days.</p>
+  <form method="post" action="{{ base }}/clones/upload" enctype="multipart/form-data" class="row">
+    <select name="member" style="width:auto" required><option value="">— pick a friend —</option>
+      {% for id, name in all_members %}<option value="{{ id }}">{{ name }}</option>{% endfor %}</select>
+    <input type="file" name="file" accept="audio/*,video/*" required>
+    <button>Upload &amp; ask them</button>
+  </form>
+  <small>10–30 s of them talking clearly, no game audio or music. A voice message or a clip from a recording works. Max 10 MB.</small>
+  {% if pending %}
+  <table style="margin-top:10px"><tr><th>Waiting for approval</th><th>Uploaded</th><th>Status</th><th></th></tr>
+  {% for p in pending %}<tr><td>{{ p.user_name }}</td><td class="muted">{{ p.ts|ts }}</td>
+    <td>{% if p.dm_status == 'DMs closed' %}<span class="pill off-pill">DMs closed</span> <small>tell them to run /voiceclone status</small>{% else %}<span class="pill">{{ p.dm_status }}</span>{% endif %}</td>
+    <td class="row"><form method="post" action="{{ base }}/clones/{{ p.user_id }}/resend"><button class="ghost">Resend DM</button></form>
+    <form method="post" action="{{ base }}/clones/{{ p.user_id }}/cancel"><button class="ghost">Cancel</button></form></td></tr>{% endfor %}
+  </table>{% endif %}
 </div>
 <form method="post" action="{{ base }}/sounds/config" class="card row">
   <span>Volume <input type="number" name="volume" value="{{ volume }}" min="0" max="1000" style="width:90px">%</span>

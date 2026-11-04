@@ -78,7 +78,8 @@ past 100%), make the robot voice (espeak-ng) say anything in someone's call, or 
 Friends who *want* to be cloned run `/voiceclone optin`, choose who may use their voice (bot owners only, or everyone), and upload
 10–30 s of **their own** voice with `/voiceclone sample` (a Discord voice message works). After that, `/mimic @friend <text>`,
 `,,clone @friend <text>` or the Soundboard page make their AI voice say anything in a call. `/voiceclone optout` deletes the sample instantly.
-Nobody can upload someone else's voice, not even from the admin panel.
+Friends too lazy to upload? Upload their clip in the panel (Soundboard → Voice clones). The bot DMs them the clip with
+**Allow** / **Delete** buttons, and their clone activates the moment they tap Allow. Unapproved samples are deleted after 7 days.
 
 Cloning needs a heavy AI model (Chatterbox, MIT-licensed, about 4 GB RAM; a GPU makes it fast), so it runs as a **separate optional service**.
 That can be on your YunoHost box if it has the RAM, or on a gaming PC:

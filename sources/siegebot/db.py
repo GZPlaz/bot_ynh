@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS quarantined (
 CREATE TABLE IF NOT EXISTS voice_clones (
     user_id INTEGER PRIMARY KEY, user_name TEXT, scope TEXT NOT NULL DEFAULT 'owners', consent_ts REAL,
     sample TEXT, uses INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS pending_clones (
+    user_id INTEGER PRIMARY KEY, user_name TEXT, sample TEXT, uploaded_by TEXT, ts REAL, dm_status TEXT);
 CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, kind TEXT, message TEXT);
 """
 

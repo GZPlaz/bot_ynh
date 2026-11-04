@@ -138,10 +138,13 @@ In Discord: <code>/modlogs @user</code>, <code>/case 42</code>, <code>/note</cod
 <ol>
   <li>A member runs <code>/voiceclone optin</code>, reads the explanation and chooses who may use their voice: bot owners only, or everyone.</li>
   <li>They upload 10–30 s of their own voice with <code>/voiceclone sample</code>. A Discord voice message works; clear speech, no game audio.</li>
+  <li><b>Lazy friends:</b> upload the clip for them on the Soundboard page instead. The bot DMs them the clip with <b>Allow (owners only)</b>,
+  <b>Allow (everyone)</b> and <b>Delete</b> buttons, and the clone activates the moment they tap Allow. If their DMs are closed, they run
+  <code>/voiceclone status</code> to get the same buttons. Unapproved samples are deleted after 7 days.</li>
   <li>Use it with <code>/mimic</code>, <code>,,clone @user text</code>, or the voice picker on the Soundboard.</li>
   <li><code>/voiceclone optout</code> deletes the sample instantly. You can also delete clones from the Soundboard page.</li>
 </ol>
-<div class="note">Nobody can upload someone else's voice, including from this panel. The clone service adds an inaudible AI watermark, and <code>/mimic</code> labels its output in chat as AI.</div>
+<div class="note">A clone only ever activates after the person themselves agrees in Discord, whether they uploaded the clip or you did. The clone service adds an inaudible AI watermark, and <code>/mimic</code> labels its output in chat as AI.</div>
 <p>Cloning needs the separate clone service (<code>clone_server/</code> in the repo, roughly 4 GB RAM; a GPU makes it fast). Set its URL and token in
 <a href="{{ base }}/settings/voice">Robot Voice &amp; Clones</a>, then press <i>Test clone service</i> on the Soundboard. Setup steps are in <code>INSTALL.md</code>.</p>
 
