@@ -17,12 +17,12 @@ troll engine for griefing your friends. It comes with a web admin panel on your 
 
 ## 2. Install on YunoHost
 ```bash
-sudo yunohost app install https://github.com/GZPlaz/bot_ynh
+sudo yunohost app install git@github.com:GZPlaz/bot_ynh.git   # private repo: add a deploy key first (INSTALL.md §4.0)
 ```
 It asks for a domain/path, the bot token and your user ID. The panel is limited to the `admins` group through YunoHost SSO.
 You can change who has access under *Users → Permissions*.
 
-Upgrade after pulling changes: `sudo yunohost app upgrade siegebot -u https://github.com/GZPlaz/bot_ynh`
+Upgrade after pulling changes: `sudo yunohost app upgrade siegebot -u git@github.com:GZPlaz/bot_ynh.git`
 Logs: `sudo journalctl -u siegebot -f`
 
 ## Features
