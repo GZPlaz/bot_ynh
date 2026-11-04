@@ -166,6 +166,9 @@ Deleting a pack sound is remembered, so it won't come back on restart. There are
   <li><b>Suggesting a change:</b> anyone runs <code>/tier suggest @player &lt;tier&gt; &lt;reason&gt;</code>. A reason of 10–300 characters is required. Nothing changes until a reviewer approves.</li>
   <li><b>Reviewing:</b> suggestions appear in the <b>review channel</b> with ✅ Approve / ❌ Reject buttons (reject asks for an optional note), and on the <a href="{{ base }}/leaderboard">Leaderboard</a> page.
   The requester gets a DM with the verdict. Reviewers are bot owners, anyone with Manage Server, and the optional reviewer role. Nobody can review their own suggestion.</li>
+  <li><b>🎮 Positions:</b> players pick up to 3 positions (Entry Fragger, Support, Anchor, Roamer, IGL…) with <code>/position set</code>, a dropdown.
+  Reviewers can set anyone's with <code>/position set @player</code>, and you can edit them on the Leaderboard page. The list of positions, the maximum per player,
+  and whether players may set their own are in Leaderboard settings. Positions appear next to names in <code>/leaderboard</code>, <code>/tier show</code>, the panel and the public page; <code>/position list</code> shows who plays what.</li>
   <li><b>Direct edits:</b> reviewers can use <code>/tier set</code> (tier 0 removes someone), or the "Set directly" form in the panel. These are logged in the history too.</li>
   <li><b>Limits:</b> one pending suggestion per person per player, and a configurable maximum of open suggestions per person.</li>
   <li><b>Public page (optional):</b> turn on "Public leaderboard page" to get a read-only tier list at <a href="{{ base }}/public/leaderboard">{{ base }}/public/leaderboard</a>

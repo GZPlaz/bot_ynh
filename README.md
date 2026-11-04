@@ -55,7 +55,8 @@ plus custom `!commands` and keyword auto-responders that you manage from the pan
 
 **🏅 Leaderboard**: players are rated Tier 1 (best) to Tier 5 (worst). Anyone can `/tier suggest` a change *with a reason*;
 reviewers approve or reject it with buttons in a review channel or in the panel, and the requester gets the verdict by DM. There's a full history,
-`/leaderboard`, and an optional public read-only tier list page.
+`/leaderboard`, and an optional public read-only tier list page. Players also get **positions** (Entry Fragger, Support,
+Anchor, Roamer, IGL…, editable list, up to 3 each) via `/position set` or the panel, shown next to their name everywhere.
 
 **🧩 Plugins**: the voice clone service is optional. The YunoHost installer asks whether you want it, and you can add or remove it later under
 Applications → SiegeBot → Configuration → Plugins.

@@ -50,8 +50,31 @@ class RejectModal(discord.ui.Modal, title="Reject tier revision"):
         await interaction.followup.send(msg, ephemeral=True)
 
 
+class PositionPicker(discord.ui.View):
+    """Dropdown to pick positions for `target` (yourself, or someone else if you're a reviewer)."""
+
+    def __init__(self, cog, guild_id, target):
+        super().__init__(timeout=180)
+        self.cog, self.guild_id, self.target = cog, guild_id, target
+        names = cog.db.position_names()[:25]
+        current = set(cog.db.get_positions(guild_id, target.id))
+        maxn = max(1, min(len(names), int(cog.db.get("max_positions") or 3)))
+        select = discord.ui.Select(placeholder=f"Pick up to {maxn} position(s)", min_values=0, max_values=maxn,
+                                   options=[discord.SelectOption(label=n[:100], value=n[:100], default=n in current)
+                                            for n in names])
+        select.callback = self.picked
+        self.add_item(select)
+
+    async def picked(self, inter: discord.Interaction):
+        roles = self.cog.db.set_positions(self.guild_id, self.target.id, str(self.target), inter.data.get("values", []))
+        self.cog.db.log("tier", f"{inter.user} set positions for {self.target}: {', '.join(roles) or 'none'}")
+        await inter.response.edit_message(
+            content=f"✅ **{self.target.display_name}**: {', '.join(roles) or 'no positions'}", view=None)
+
+
 class Leaderboard(commands.Cog):
     tier = app_commands.Group(name="tier", description="Player tier ratings (Tier 1 = best, Tier 5 = worst)")
+    position = app_commands.Group(name="position", description="Player positions (Entry, Support, Anchor...)")
 
     def __init__(self, bot):
         self.bot = bot
@@ -183,10 +206,15 @@ class Leaderboard(commands.Cog):
     def board(self, guild_id):
         rows = self.db.q("SELECT * FROM ratings WHERE guild_id=? ORDER BY tier, user_name COLLATE NOCASE", (guild_id,))
         guild = self.bot.get_guild(guild_id)
+        pos = self.db.all_positions(guild_id)
         for r in rows:
             m = guild.get_member(r["user_id"]) if guild else None
             r["display"] = m.display_name if m else r["user_name"]
+            r["positions"] = pos.get(r["user_id"], [])
         return {t: [r for r in rows if r["tier"] == t] for t in range(1, 6)}
+
+    def label(self, r):
+        return r["display"] + (f" ({', '.join(r['positions'])})" if r.get("positions") else "")
 
     # ------------------------------------------------------------------ commands
     @app_commands.command(name="leaderboard", description="Show the tier leaderboard")
@@ -194,16 +222,18 @@ class Leaderboard(commands.Cog):
         board = self.board(inter.guild.id)
         e = discord.Embed(title=f"🏅 {inter.guild.name} Tier List", color=0xF5A623)
         for t in range(1, 6):
-            names = ", ".join(r["display"] for r in board[t]) or "*nobody (yet)*"
+            names = "\n".join(f"• {self.label(r)}" for r in board[t]) or "*nobody (yet)*"
             e.add_field(name=self.tier_name(t), value=names[:1024], inline=False)
-        e.set_footer(text="Think someone's misranked? /tier suggest. Reviewers decide.")
+        e.set_footer(text="Misranked? /tier suggest · Set your positions: /position set")
         await inter.response.send_message(embed=e)
 
     @tier.command(name="show", description="See someone's tier")
     async def show(self, inter: discord.Interaction, member: discord.Member = None):
         member = member or inter.user
         t = self.rating(inter.guild.id, member.id)
-        await inter.response.send_message(f"**{member.display_name}** is {self.tier_name(t) if t else 'unranked'}.",
+        pos = self.db.get_positions(inter.guild.id, member.id)
+        await inter.response.send_message(f"**{member.display_name}** is {self.tier_name(t) if t else 'unranked'}"
+                                          + (f" · plays **{', '.join(pos)}**" if pos else "") + ".",
                                           allowed_mentions=discord.AllowedMentions.none())
 
     @tier.command(name="suggest", description="Suggest a tier change for someone (a reviewer has to approve it)")
@@ -236,3 +266,44 @@ class Leaderboard(commands.Cog):
         self.set_direct(inter.guild.id, member.id, str(member), tier, str(inter.user), reason)
         await inter.response.send_message(f"🛠️ **{member.display_name}** is now {self.tier_name(tier) if tier else 'unranked'}.",
                                           allowed_mentions=discord.AllowedMentions.none())
+
+    # ------------------------------------------------------------------ positions
+    @position.command(name="set", description="Choose your positions (or someone else's, if you're a reviewer)")
+    async def position_set(self, inter: discord.Interaction, member: discord.Member = None):
+        target = member or inter.user
+        if target != inter.user and not self.is_reviewer(inter.user):
+            await inter.response.send_message("You can only set your own positions. Reviewers can set anyone's.", ephemeral=True)
+            return
+        if target == inter.user and not self.db.get("positions_self_edit") and not self.is_reviewer(inter.user):
+            await inter.response.send_message("Positions are assigned by the reviewers on this server.", ephemeral=True)
+            return
+        if not self.db.position_names():
+            await inter.response.send_message("No positions are configured. Yell at an admin.", ephemeral=True)
+            return
+        await inter.response.send_message(f"Positions for **{target.display_name}**:",
+                                          view=PositionPicker(self, inter.guild.id, target), ephemeral=True)
+
+    @position.command(name="show", description="See what positions someone plays")
+    async def position_show(self, inter: discord.Interaction, member: discord.Member = None):
+        member = member or inter.user
+        pos = self.db.get_positions(inter.guild.id, member.id)
+        await inter.response.send_message(f"**{member.display_name}** plays {', '.join(pos) if pos else 'nothing yet (/position set)'}.",
+                                          allowed_mentions=discord.AllowedMentions.none())
+
+    @position.command(name="list", description="Who plays what")
+    async def position_list(self, inter: discord.Interaction):
+        allpos = self.db.all_positions(inter.guild.id)
+        e = discord.Embed(title=f"🎮 {inter.guild.name} Positions", color=0x5865F2)
+        for name in self.db.position_names()[:25]:
+            people = [inter.guild.get_member(uid) for uid, roles in allpos.items() if name in roles]
+            e.add_field(name=name, value=", ".join(m.display_name for m in people if m)[:1024] or "*nobody*", inline=True)
+        await inter.response.send_message(embed=e)
+
+    @position.command(name="clear", description="Clear your positions (or someone else's, if you're a reviewer)")
+    async def position_clear(self, inter: discord.Interaction, member: discord.Member = None):
+        target = member or inter.user
+        if target != inter.user and not self.is_reviewer(inter.user):
+            await inter.response.send_message("You can only clear your own positions.", ephemeral=True)
+            return
+        self.db.set_positions(inter.guild.id, target.id, str(target), [])
+        await inter.response.send_message(f"Cleared positions for **{target.display_name}**.", ephemeral=True)

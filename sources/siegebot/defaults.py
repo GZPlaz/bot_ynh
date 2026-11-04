@@ -297,6 +297,9 @@ DEFAULTS = {
     "announcer_lines": ANNOUNCER_LINES,
     # leaderboard
     "tier_names": ["Siege Gods", "Cracked", "Solid", "Hit or Miss", "Bot Frag"],
+    "position_names": ["Entry Fragger", "Hard Breacher", "Support", "Flex", "Intel", "IGL", "Anchor", "Roamer"],
+    "max_positions": 3,
+    "positions_self_edit": True,
     "tier_requests_enabled": True,
     "tier_review_channel_id": "",
     "tier_reviewer_role_id": "",
