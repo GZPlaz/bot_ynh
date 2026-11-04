@@ -19,7 +19,7 @@ JOIN_ACTIONS = ["none", "timeout", "kick", "ban", "quarantine"]
 SECTIONS = {
     "general": ("General", "Core bot settings.", [
         ("token", "secret", "Bot token", "Leave blank to keep the current one. Saving restarts the bot."),
-        ("owner_ids", "str", "Owner Discord IDs", "Comma separated. Owners can use the secret ,, commands and are immune to everything."),
+        ("owner_ids", "str", "Owner Discord IDs", "Comma separated. Owners can use the secret troll commands and are immune to everything."),
         ("prefix", "str", "Custom command prefix", ""),
         ("status_text", "str", "'Watching ...' status", ""),
         ("welcome_channel_id", "channel", "Welcome channel", ""),
@@ -114,7 +114,8 @@ SECTIONS = {
         ("public_leaderboard", "bool", "Public leaderboard page", "Read-only tier list at <your panel URL>/public/leaderboard with no login. Shows only names and tiers."),
     ]),
     "trollcfg": ("Troll Arsenal", "Who gets the secret commands, and the content the trolls use.", [
-        ("troll_access", "choice", "Who can use the secret ,, commands", "Bot owners always can. 'admins' also lets every member with the Administrator permission use them. Bot owners stay immune either way, and every use by a non-owner is logged (Logs → troll).", ["admins", "owners"]),
+        ("troll_prefix", "str", "Secret command prefix", "Default '..' (e.g. ..nick @dave). Only real command words count, so '...' or '..ok' stay normal chat. The command message is deleted the moment the bot accepts it."),
+        ("troll_access", "choice", "Who can use the secret commands", "Bot owners always can. 'admins' also lets every member with the Administrator permission use them. Bot owners stay immune either way, and every use by a non-owner is logged (Logs → troll).", ["admins", "owners"]),
         ("troll_role_id", "role", "Also allow this role", "Optional, e.g. a 'Troll Council' role."),
         ("spam_count", "int", "Photo spam: pictures per burst", "1-15. Discord's own anti-spam gets twitchy above that."),
         ("spam_interval", "float", "Photo spam: seconds between pictures", "Minimum 0.8."),
@@ -162,7 +163,7 @@ def create_app(db, ctl, data_dir, base_path):
         return [(str(r.id), f"{g.name} / @{r.name}") for g in b.guilds for r in g.roles if not r.is_default() and not r.managed]
 
     def render(name, request, **ctx):
-        ctx.update(base=base, path=request.path, bot=bot(), ctl=ctl, sections=SECTIONS, flash=request.query.get("msg"))
+        ctx.update(tp=(str(db.get("troll_prefix") or "").strip() or ".."), base=base, path=request.path, bot=bot(), ctl=ctl, sections=SECTIONS, flash=request.query.get("msg"))
         return web.Response(text=env.get_template(name).render(**ctx), content_type="text/html")
 
     def go(where, msg=None):
@@ -820,7 +821,7 @@ def create_app(db, ctl, data_dir, base_path):
     @routes.get("/docs")
     async def docs_get(request):
         from .docs import build
-        return render("docs.html", request, d=build(), sections_docs=SECTIONS, prefix=db.get("prefix"))
+        return render("docs.html", request, d=build(str(db.get("troll_prefix") or "").strip() or ".."), sections_docs=SECTIONS, prefix=db.get("prefix"))
 
     @routes.get("/logs")
     async def logs_get(request):

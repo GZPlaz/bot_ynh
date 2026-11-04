@@ -4,7 +4,7 @@ id = "siegebot"
 name = "SiegeBot"
 description.en = "Sarcastic Discord moderation bot for R6 Siege communities, with a web admin panel"
 
-version = "3.3.0~ynh1"
+version = "3.4.0~ynh1"
 
 maintainers = []
 

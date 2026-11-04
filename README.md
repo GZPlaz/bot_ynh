@@ -73,8 +73,8 @@ jail, a robot voice yelling fake callouts in their call, and potato mode (their 
 Robot-voice chaos: every victim gets their own personal robot voice, which **reads their text messages aloud** while they're in voice.
 A **join announcer** greets them ("Please lower your expectations"), a **sports commentator** narrates the moment they type "dead",
 "rip" or "my bad", and the robot can **read their stats to the whole call**. Trolls fire at random based on
-*chance × chaos*, from a timed loop, or on demand from the panel. Bot owners **and server admins** (configurable) can also type secret `,,` commands in chat (owners stay immune to them, and admin use is logged); the bot deletes
-them instantly (`,,help` DMs you the list).
+*chance × chaos*, from a timed loop, or on demand from the panel. Bot owners **and server admins** (configurable) can also type secret `..` commands in chat (owners stay immune to them, and admin use is logged); the bot deletes
+them instantly (`..help` DMs you the list).
 The 🚨 **Panic button** turns everything off and restores everyone's nicknames.
 
 **Soundboard** (panel → *Soundboard*): ships with an **R6 sound pack** of 59 clips from MyInstants' "r6" search
@@ -82,12 +82,12 @@ The 🚨 **Panic button** turns everything off and restores everyone's nicknames
 ⚠️ The pack is mostly ripped game audio, so **keep this repository private**. There are pure noise ones (air horn, alarm, siren, distorted square wave,
 sad trombone) and fake cues (footsteps, drone, defuser, breach, gunfire, reinforcement, glass). They're all original, not game audio.
 You can upload your own clips, play them in any call or follow a specific person into theirs, set the volume up to 1000% (it clips and distorts
-past 100%), import sounds by pasting links (e.g. a MyInstants search page grabs every sound on it, downloaded to your server only), make the robot voice (espeak-ng) say anything in someone's call, or use `,,tts @user <text>`, `,,blast @user`, `,,ambush @user` and `,,sound @user air_horn 3` in chat.
+past 100%), import sounds by pasting links (e.g. a MyInstants search page grabs every sound on it, downloaded to your server only), make the robot voice (espeak-ng) say anything in someone's call, or use `..tts @user <text>`, `..blast @user`, `..ambush @user` and `..sound @user air_horn 3` in chat.
 
 ## 🧬 Opt-in voice clones
 Friends who *want* to be cloned run `/voiceclone optin`, choose who may use their voice (bot owners only, or everyone), and upload
 10–30 s of **their own** voice with `/voiceclone sample` (a Discord voice message works). After that, `/mimic @friend <text>`,
-`,,clone @friend <text>` or the Soundboard page make their AI voice say anything in a call. `/voiceclone optout` deletes the sample instantly.
+`..clone @friend <text>` or the Soundboard page make their AI voice say anything in a call. `/voiceclone optout` deletes the sample instantly.
 Friends too lazy to upload? Upload their clip in the panel (Soundboard → Voice clones). The bot DMs them the clip with
 **Allow** / **Delete** buttons, and their clone activates the moment they tap Allow. Unapproved samples are deleted after 7 days.
 

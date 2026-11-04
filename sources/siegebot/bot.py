@@ -30,7 +30,7 @@ class SiegeBot(commands.Bot):
         return user.id in self.owner_id_set
 
     def can_troll(self, member):
-        """Who may use the secret ,, commands: bot owners always, plus server admins and/or a chosen role."""
+        """Who may use the secret troll commands: bot owners always, plus server admins and/or a chosen role."""
         if self.is_boss(member):
             return True
         if self.db.get("troll_access") == "admins" and getattr(getattr(member, "guild_permissions", None), "administrator", False):
@@ -88,7 +88,7 @@ class SiegeBot(commands.Bot):
             return  # message was removed by moderation
 
         trolls = self.get_cog("Trolls")
-        if trolls and message.content.startswith(",,") and self.can_troll(message.author):
+        if trolls and trolls.parse_command(message.content) and self.can_troll(message.author):
             self.suppress_delete_log.add(message.id)
             await trolls.hidden_command(message)
             return
