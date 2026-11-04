@@ -1,0 +1,45 @@
+#!/bin/bash
+source _common.sh
+source /usr/share/yunohost/helpers
+
+# Settings needed to re-render .env and the clone unit
+for _key in install_dir data_dir path port port_clone bot_token owner_ids; do
+    declare "$_key=$(ynh_app_setting_get --key="$_key")"
+done
+
+#=================================================
+# GETTERS
+#=================================================
+get__clone_status() {
+    local text
+    if systemctl is-active --quiet "${app}-clone" 2>/dev/null; then
+        text="✅ The voice clone service is installed and running on 127.0.0.1:${port_clone}. The first start downloads the AI model (~2 GB), so give it a few minutes."
+    elif [ -f "/etc/systemd/system/${app}-clone.service" ]; then
+        text="⚠️ The voice clone service is installed but not running. Check the logs: journalctl -u ${app}-clone"
+    else
+        text="The voice clone service is not installed."
+    fi
+    cat << EOF
+ask:
+  en: '${text}'
+EOF
+}
+
+#=================================================
+# SETTERS (only run when the value changed)
+#=================================================
+set__clone_service() {
+    local wanted="$clone_service"   # the new value from the form
+    _siegebot_default_settings      # loads clone_token etc. (and the *old* clone_service)
+    if _is_true "$wanted"; then
+        ynh_script_progression "Installing the voice clone plugin (this takes a while)..."
+        _clone_install
+    else
+        ynh_script_progression "Removing the voice clone plugin..."
+        _clone_remove
+        _siegebot_write_env
+    fi
+    ynh_systemctl --service="$app" --action="restart"
+}
+
+ynh_app_config_run "$1"

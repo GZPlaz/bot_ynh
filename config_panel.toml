@@ -1,0 +1,19 @@
+#:schema https://github.com/YunoHost/apps/raw/main/schemas/config_panel.v1.schema.json
+version = "1.0"
+
+[main]
+name = "SiegeBot"
+
+    [main.plugins]
+    name = "Plugins"
+    help = "Optional add-ons you can install or remove at any time."
+
+        [main.plugins.clone_service]
+        ask.en = "Voice clone service"
+        type = "boolean"
+        help.en = "Lets members who opted in have an AI clone of their voice (/voiceclone). Needs about 4 GB RAM and 6 GB disk; installing takes 10+ minutes on CPU. Turning it off uninstalls it and frees the space (opted-in voice samples are kept). Using a GPU machine instead? Leave this off and set the URL in the bot's admin panel."
+
+        [main.plugins.clone_status]
+        ask.en = "Status"
+        type = "markdown"
+        bind = "null"

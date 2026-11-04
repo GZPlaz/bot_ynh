@@ -41,11 +41,13 @@ th{color:var(--muted);font-weight:600;font-size:13px}
   <div class="logo">Siege<span>Bot</span></div>
   <a href="{{ base }}/" class="{{ 'on' if path == '/' }}">Dashboard</a>
   <a href="{{ base }}/docs" class="{{ 'on' if path == '/docs' }}">📖 Documentation</a>
+  <a href="{{ base }}/plugins" class="{{ 'on' if path == '/plugins' }}">🧩 Plugins</a>
   <div class="sep">Configure</div>
-  {% for key, s in sections.items() if key not in ('trollcfg', 'security', 'logging', 'moderation', 'voice') %}
+  {% for key, s in sections.items() if key not in ('trollcfg', 'security', 'logging', 'moderation', 'voice', 'leaderboard') %}
   <a href="{{ base }}/settings/{{ key }}" class="{{ 'on' if path == '/settings/' ~ key }}">{{ s[0] }}</a>
   {% endfor %}
   <a href="{{ base }}/commands" class="{{ 'on' if path == '/commands' }}">Commands &amp; Responders</a>
+  <a href="{{ base }}/leaderboard" class="{{ 'on' if path == '/leaderboard' }}">🏅 Leaderboard</a>
   <div class="sep">Moderate</div>
   <a href="{{ base }}/settings/moderation" class="{{ 'on' if path == '/settings/moderation' }}">Automod</a>
   <a href="{{ base }}/settings/security" class="{{ 'on' if path == '/settings/security' }}">Security</a>

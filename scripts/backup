@@ -7,5 +7,6 @@ ynh_backup "$install_dir"
 ynh_backup "$data_dir"
 ynh_backup "/etc/nginx/conf.d/$domain.d/$app.conf"
 ynh_backup "/etc/systemd/system/$app.service"
+# The voice clone venv/model ($clone_root) is NOT backed up: it's several GB and gets reinstalled on restore.
 
 ynh_print_info "Backup script completed for $app."

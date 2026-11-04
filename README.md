@@ -53,6 +53,13 @@ The panel also has a case browser, quarantine and temp-ban lists, and raid/lockd
 `/challenge` (random round restriction), `/stats` (made up, and it's always on your side), `/roast` (owners get uno-reversed), `/8ball`, `/rate`, `!help`,
 plus custom `!commands` and keyword auto-responders that you manage from the panel.
 
+**🏅 Leaderboard**: players are rated Tier 1 (best) to Tier 5 (worst). Anyone can `/tier suggest` a change *with a reason*;
+reviewers approve or reject it with buttons in a review channel or in the panel, and the requester gets the verdict by DM. There's a full history,
+`/leaderboard`, and an optional public read-only tier list page.
+
+**🧩 Plugins**: the voice clone service is optional. The YunoHost installer asks whether you want it, and you can add or remove it later under
+Applications → SiegeBot → Configuration → Plugins.
+
 **Personality**: ping it, reply to it, or say "good bot"/"bad bot" and it answers back with sass. Every line can be edited in the panel.
 
 **Troll engine** (panel → *Troll Control*): add targets and pick their trolls:

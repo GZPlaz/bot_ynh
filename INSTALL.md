@@ -64,6 +64,7 @@ You'll be asked for:
 | Who can access the panel | keep **admins**. The panel controls moderation and lists the secret trolls. |
 | Discord bot token | from step 2 |
 | Your Discord user ID(s) | from step 2; separate several with commas |
+| Install the voice clone service? | **No** unless you want AI voice clones right away *and* the server has ~4 GB free RAM and 6 GB disk. You can add it later as a plugin ([section 6](#6-optional-voice-clone-service)). |
 
 ### Option B: web admin
 
@@ -81,7 +82,9 @@ When it finishes, the bot comes online in Discord within a few seconds and the p
 4. **Security**: add trusted moderators (user or role IDs) to the **whitelist** so anti-nuke never touches them.
    Check the anti-raid numbers suit your server size.
 5. Optional **verification gate**: see the in-panel documentation (📖 Documentation → Security → Verification).
-6. **Troll Control**: add your first target. 😈
+6. **🏅 Leaderboard settings**: pick a **review channel** (where tier suggestions get Approve/Reject buttons) and optionally a reviewer role.
+   Turn on the **public leaderboard page** if friends should see the tier list without logging in.
+7. **Troll Control**: add your first target. 😈
 
 Everything else is explained on the panel's **📖 Documentation** page. Its command, troll and settings lists are generated from the code, so they're always current.
 
@@ -95,7 +98,22 @@ Generating a cloned voice needs an AI model (Chatterbox, MIT-licensed), which is
 | Same YunoHost server | ~4 GB free RAM, ~6 GB disk | 10–40 s per sentence (CPU) |
 | A gaming PC with an NVIDIA GPU | ~4 GB VRAM, ~6 GB disk | about 1–3 s per sentence |
 
-### 6a. On the YunoHost server (CPU)
+### 6a. On the YunoHost server (CPU): the easy way, as a plugin
+
+If you answered **yes** during install, it's already done. Otherwise you can add it (or remove it) whenever you like:
+
+- **Web admin:** Applications → **SiegeBot** → **Configuration** → **Plugins** → toggle **Voice clone service** → **Save**. It takes 10+ minutes.
+- **Command line:**
+  ```bash
+  sudo yunohost app config set siegebot main.plugins.clone_service -v 1   # install
+  sudo yunohost app config set siegebot main.plugins.clone_service -v 0   # uninstall (frees the space)
+  ```
+
+The plugin runs on `127.0.0.1` with an auto-generated token and the bot is connected to it automatically, with nothing to configure.
+The first start downloads the AI model (~2 GB) in the background; follow it with `sudo journalctl -u siegebot-clone -f`.
+Check it on the panel's **🧩 Plugins** page (*Test connection*). Upgrades keep the plugin installed; backups skip its multi-GB files and restores reinstall them.
+
+### 6a (manual alternative). Without the plugin system
 
 ```bash
 git clone https://github.com/GZPlaz/bot_ynh /tmp/bot_ynh

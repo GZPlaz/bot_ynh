@@ -9,12 +9,16 @@ ynh_script_progression "Upgrading code and dependencies..."
 _siegebot_install_code
 
 ynh_script_progression "Updating configuration..."
-ynh_config_add --template=".env" --destination="$install_dir/.env"
-chmod 600 "$install_dir/.env"
-chown "$app:$app" "$install_dir/.env"
+_siegebot_default_settings
+_siegebot_write_env
 ynh_config_add_nginx
 ynh_config_add_systemd
 yunohost service add "$app" --description="SiegeBot Discord bot"
+
+if _is_true "$clone_service"; then
+    ynh_script_progression "Updating the voice clone service..."
+    _clone_install
+fi
 
 ynh_script_progression "Starting the bot..."
 ynh_systemctl --service="$app" --action="start"
