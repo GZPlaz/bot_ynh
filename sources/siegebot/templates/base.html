@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SiegeBot Panel</title>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--line:#2a2f3a;--text:#e6e8ec;--muted:#8b93a3;--accent:#f5a623;--bad:#e5484d;--good:#30a46c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+a{color:var(--accent);text-decoration:none}
+.wrap{display:flex;min-height:100vh}
+nav{width:220px;background:var(--card);border-right:1px solid var(--line);padding:18px 12px;flex-shrink:0}
+nav .logo{font-weight:800;font-size:18px;margin:0 8px 18px}nav .logo span{color:var(--accent)}
+nav a{display:block;padding:8px 10px;border-radius:6px;color:var(--text)}nav a:hover,nav a.on{background:#232835}
+nav .sep{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin:14px 10px 4px}
+main{flex:1;padding:24px;max-width:1100px;min-width:0}
+h1{margin:0 0 6px;font-size:24px}.muted{color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin:16px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}.stat b{font-size:26px;display:block}
+label{display:block;font-weight:600;margin:12px 0 4px}small{color:var(--muted);display:block}
+input[type=text],input[type=number],input[type=password],select,textarea{width:100%;background:#0f1115;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit}
+textarea{min-height:120px;font-family:ui-monospace,monospace;font-size:13px}
+button,.btn{background:var(--accent);color:#111;border:0;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;font:inherit;font-weight:700}
+button.ghost{background:#232835;color:var(--text)}button.bad{background:var(--bad);color:#fff}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:13px}
+.flash{background:#2a2412;border:1px solid var(--accent);padding:10px 14px;border-radius:8px;margin:12px 0}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:#232835;margin:1px}
+.on-pill{background:var(--good);color:#fff}.off-pill{background:var(--bad);color:#fff}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.inline{display:inline}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px}.checks label{font-weight:400;margin:0}
+@media(max-width:760px){.wrap{display:block}nav{width:auto;border-right:0;border-bottom:1px solid var(--line)}main{padding:16px}}
+</style>
+</head>
+<body><div class="wrap">
+<nav>
+  <div class="logo">Siege<span>Bot</span></div>
+  <a href="{{ base }}/" class="{{ 'on' if path == '/' }}">Dashboard</a>
+  <div class="sep">Configure</div>
+  {% for key, s in sections.items() if key != 'trollcfg' %}
+  <a href="{{ base }}/settings/{{ key }}" class="{{ 'on' if path == '/settings/' ~ key }}">{{ s[0] }}</a>
+  {% endfor %}
+  <a href="{{ base }}/commands" class="{{ 'on' if path == '/commands' }}">Commands &amp; Responders</a>
+  <div class="sep">Moderate</div>
+  <a href="{{ base }}/warnings" class="{{ 'on' if path == '/warnings' }}">Warnings</a>
+  <a href="{{ base }}/say" class="{{ 'on' if path == '/say' }}">Speak as Bot</a>
+  <a href="{{ base }}/logs" class="{{ 'on' if path == '/logs' }}">Logs</a>
+  <div class="sep">🤫 Classified</div>
+  <a href="{{ base }}/trolls" class="{{ 'on' if path == '/trolls' }}">Troll Control</a>
+  <a href="{{ base }}/settings/trollcfg" class="{{ 'on' if path == '/settings/trollcfg' }}">Troll Arsenal</a>
+</nav>
+<main>
+{% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+{% block body %}{% endblock %}
+</main>
+</div></body></html>

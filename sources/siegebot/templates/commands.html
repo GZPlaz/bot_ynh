@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% block body %}
+<h1>Commands &amp; Auto-responders</h1>
+<p class="muted">Placeholders: <code>{user}</code> <code>{mention}</code> <code>{server}</code> <code>{args}</code> (text after the command)
+<code>{target}</code> (first @mention, or the author) <code>{op}</code> (random operator).</p>
+<div class="card">
+  <h3 style="margin-top:0">Custom commands (prefix <code>{{ prefix }}</code>)</h3>
+  <form method="post" action="{{ base }}/commands/add">
+    <div class="row"><input type="text" name="name" placeholder="name, e.g. clutch" style="max-width:220px" required>
+    <input type="text" name="response" placeholder="Response, e.g. {target} has never clutched in their life." style="flex:1" required>
+    <button>Add / update</button></div>
+  </form>
+  <table><tr><th>Command</th><th>Response</th><th>Uses</th><th></th></tr>
+  {% for r in rows %}<tr>
+    <td><code>{{ prefix }}{{ r.name }}</code> {% if not r.enabled %}<span class="pill off-pill">off</span>{% endif %}</td>
+    <td>{{ r.response }}</td><td>{{ r.uses }}</td>
+    <td class="row"><form method="post" action="{{ base }}/commands/{{ r.name }}/toggle"><button class="ghost">{{ 'Disable' if r.enabled else 'Enable' }}</button></form>
+    <form method="post" action="{{ base }}/commands/{{ r.name }}/delete"><button class="bad">Delete</button></form></td>
+  </tr>{% else %}<tr><td colspan="4" class="muted">No custom commands yet.</td></tr>{% endfor %}</table>
+</div>
+<div class="card">
+  <h3 style="margin-top:0">Auto-responders</h3>
+  <p class="muted">The bot replies when a message matches. Chance lets you make it unpredictable.</p>
+  <form method="post" action="{{ base }}/responders/add">
+    <div class="row"><input type="text" name="trigger" placeholder="trigger, e.g. ez" style="max-width:200px" required>
+    <select name="match" style="max-width:130px"><option value="contains">contains</option><option value="exact">exact</option></select>
+    <input type="text" name="response" placeholder="Response" style="flex:1" required>
+    <input type="number" name="chance" value="100" min="0" max="100" style="max-width:90px" title="chance %">%
+    <button>Add</button></div>
+  </form>
+  <table><tr><th>Trigger</th><th>Response</th><th>Chance</th><th></th></tr>
+  {% for r in responders %}<tr><td><code>{{ r.trigger }}</code> <span class="pill">{{ r.match }}</span></td><td>{{ r.response }}</td>
+  <td>{{ (r.chance * 100)|round|int }}%</td>
+  <td><form method="post" action="{{ base }}/responders/{{ r.id }}/delete"><button class="bad">Delete</button></form></td></tr>
+  {% else %}<tr><td colspan="4" class="muted">None yet. Try trigger "ez" → "was it though, {user}?"</td></tr>{% endfor %}</table>
+</div>
+{% endblock %}

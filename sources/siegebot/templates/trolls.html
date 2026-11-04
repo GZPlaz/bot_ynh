@@ -1,0 +1,56 @@
+{% extends "base.html" %}{% block body %}
+<h1>🤫 Troll Control</h1>
+<p class="muted">Pick your victims. Everything here is reversible; the panic button on the dashboard turns it all off and restores nicknames.</p>
+
+<form method="post" action="{{ base }}/trolls/config" class="card">
+  <div class="row">
+    <label style="margin:0"><input type="checkbox" name="enabled" {{ 'checked' if enabled }}> Trolling enabled</label>
+    <span>Chaos multiplier <input type="number" name="chaos" step="0.1" min="0" max="5" value="{{ chaos }}" style="width:80px"></span>
+    <span>Random troll every <input type="number" name="loop" min="1" value="{{ loop }}" style="width:80px"> min</span>
+    <button>Apply</button>
+  </div>
+  <small>Per-message trolls fire with probability (target chance × chaos). The timed loop rolls the same odds for the active trolls.</small>
+</form>
+
+<div class="card">
+  <h3 style="margin-top:0">Targets</h3>
+  <table><tr><th>Victim</th><th>Trolls</th><th>Chance</th><th>Manual strike</th><th></th></tr>
+  {% for t in targets %}<tr>
+    <td><b>{{ t.name }}</b><br><small>{{ t.user_id }}{% if t.in_voice %} · 🎙️ in voice{% endif %}{% if t.nick_changed %} · renamed{% endif %}</small></td>
+    <td>{% for x in t.trolls %}<span class="pill">{{ x }}</span>{% else %}<span class="muted">manual only</span>{% endfor %}</td>
+    <td>{{ (t.chance * 100)|round|int }}%</td>
+    <td><form method="post" action="{{ base }}/trolls/{{ t.user_id }}/action" class="row">
+      <select name="action" style="width:auto">{% for k, label in actions.items() %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select>
+      <select name="channel" style="width:auto" title="Channel (for fake ban / ghost ping)"><option value="">random channel</option>
+      {% for cid, cname in channels %}<option value="{{ cid }}">{{ cname }}</option>{% endfor %}</select>
+      <button>Fire 🚀</button></form></td>
+    <td><form method="post" action="{{ base }}/trolls/{{ t.user_id }}/delete"><button class="ghost">Release</button></form></td>
+  </tr>{% else %}<tr><td colspan="5" class="muted">No targets. Your friends are safe. For now.</td></tr>{% endfor %}</table>
+</div>
+
+<form method="post" action="{{ base }}/trolls/target" class="card">
+  <h3 style="margin-top:0">Add / edit target</h3>
+  {% if members %}<label>Member</label><select name="user_id"><option value="">— choose —</option>
+    {% for id, name in members %}<option value="{{ id }}">{{ name }}</option>{% endfor %}</select>{% endif %}
+  <label>…or Discord user ID</label><input type="text" name="user_id_manual" placeholder="123456789012345678">
+  <label>Chance per message / per loop tick (%)</label><input type="number" name="chance" value="15" min="0" max="100">
+  <label>Trolls to unleash</label>
+  <div class="checks">{% for x in types %}<label><input type="checkbox" name="t_{{ x }}" checked> <b>{{ x }}</b> <small>{{ descriptions[x] }}</small></label>{% endfor %}</div>
+  <p><button>Lock in target 🎯</button></p>
+</form>
+
+<div class="card">
+  <h3 style="margin-top:0">Secret in-chat commands (owners only)</h3>
+  <p class="muted">Type these in any channel. The message is deleted instantly, nobody sees it was you.</p>
+  <table>
+    <tr><td><code>,,nick @user</code> / <code>,,unnick @user</code></td><td>Rename / restore</td></tr>
+    <tr><td><code>,,ghost @user</code></td><td>Ghost ping</td></tr>
+    <tr><td><code>,,fakeban @user</code></td><td>Fake ban announcement in the current channel</td></tr>
+    <tr><td><code>,,shuffle @user</code> / <code>,,mute @user</code></td><td>Voice shuffle / 5s server mute</td></tr>
+    <tr><td><code>,,report @user</code></td><td>Fake report DM</td></tr>
+    <tr><td><code>,,mock @user</code></td><td>Mock their next message</td></tr>
+    <tr><td><code>,,target @user</code> / <code>,,untarget @user</code></td><td>Add with all trolls / release</td></tr>
+    <tr><td><code>,,chaos 2</code> · <code>,,on</code> · <code>,,off</code> · <code>,,panic</code> · <code>,,help</code></td><td>Chaos level, toggle, panic, DM help</td></tr>
+  </table>
+</div>
+{% endblock %}

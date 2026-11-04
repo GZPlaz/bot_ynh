@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% block body %}
+<h1>Dashboard</h1>
+<p class="muted">The command center for moderation and, more importantly, crimes.</p>
+<div class="card">
+  {% if bot %}
+    <p><span class="pill on-pill">ONLINE</span> Logged in as <b>{{ bot.user }}</b> in {{ bot.guilds|length }} server(s).
+    Up {{ uptime // 3600 }}h {{ (uptime % 3600) // 60 }}m. Latency {{ (bot.latency * 1000)|int }} ms.</p>
+    <p class="muted">Servers: {% for g in bot.guilds %}<span class="pill">{{ g.name }} ({{ g.member_count }})</span>{% endfor %}</p>
+  {% else %}
+    <p><span class="pill off-pill">OFFLINE</span> {{ ctl.error or 'Connecting...' }}</p>
+  {% endif %}
+  <div class="row">
+    <form method="post" action="{{ base }}/bot/restart" class="inline"><button>Restart bot</button></form>
+    <form method="post" action="{{ base }}/bot/stop" class="inline"><button class="ghost">Stop bot</button></form>
+    <form method="post" action="{{ base }}/bot/panic" class="inline" onsubmit="return confirm('Disable all trolls and restore nicknames?')">
+      <button class="bad">🚨 Panic button (hide the evidence)</button></form>
+  </div>
+</div>
+<div class="grid">
+  <div class="stat"><b>{{ stats.commands }}</b>custom commands</div>
+  <div class="stat"><b>{{ stats.responders }}</b>auto-responders</div>
+  <div class="stat"><b>{{ stats.warnings }}</b>warnings issued</div>
+  <div class="stat"><b>{{ stats.targets }}</b>troll targets {{ '😈' if trolls_enabled else '(trolls off)' }}</div>
+</div>
+<div class="card">
+  <h3 style="margin-top:0">Recent activity</h3>
+  <table>{% for l in logs %}<tr><td class="muted" style="white-space:nowrap">{{ l.ts|ts }}</td><td><span class="pill">{{ l.kind }}</span></td><td>{{ l.message }}</td></tr>
+  {% else %}<tr><td class="muted">Nothing yet. Suspiciously peaceful.</td></tr>{% endfor %}</table>
+</div>
+{% endblock %}

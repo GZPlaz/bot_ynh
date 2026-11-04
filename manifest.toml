@@ -1,0 +1,60 @@
+packaging_format = 2
+
+id = "siegebot"
+name = "SiegeBot"
+description.en = "Sarcastic Discord moderation bot for R6 Siege communities, with a web admin panel"
+
+version = "1.0.0~ynh1"
+
+maintainers = []
+
+[upstream]
+license = "MIT"
+
+[integration]
+yunohost = ">= 12.0"
+helpers_version = "2.1"
+architectures = "all"
+multi_instance = true
+ldap = false
+sso = true
+disk = "100M"
+ram.build = "200M"
+ram.runtime = "100M"
+
+[install]
+    [install.domain]
+    type = "domain"
+
+    [install.path]
+    type = "path"
+    default = "/siegebot"
+
+    [install.init_main_permission]
+    help = "Who can open the admin panel. Keep this as admins only!"
+    type = "group"
+    default = "admins"
+
+    [install.bot_token]
+    ask.en = "Discord bot token (from https://discord.com/developers/applications)"
+    help = "You can change it later from the admin panel."
+    type = "string"
+
+    [install.owner_ids]
+    ask.en = "Your Discord user ID(s), comma separated (unlocks the secret troll commands)"
+    type = "string"
+
+[resources]
+    [resources.system_user]
+
+    [resources.install_dir]
+
+    [resources.data_dir]
+
+    [resources.permissions]
+    main.url = "/"
+
+    [resources.ports]
+
+    [resources.apt]
+    packages = "python3-venv, python3-pip"

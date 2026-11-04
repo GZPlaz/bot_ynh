@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% block body %}
+<h1>Speak as Bot</h1><p class="muted">Make the bot say anything. @everyone/@here and role pings are blocked.</p>
+<form method="post" class="card">
+  <label>Channel</label><select name="channel">{% for cid, cname in channels %}<option value="{{ cid }}">{{ cname }}</option>{% else %}<option value="">Bot offline</option>{% endfor %}</select>
+  <label>Message</label><textarea name="content" maxlength="2000" placeholder="I have become self-aware. Also, Dave, you're bad at Siege."></textarea>
+  <p><button>Send</button></p>
+</form>
+{% endblock %}

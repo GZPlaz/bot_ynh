@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% block body %}
+<h1>{{ title }}</h1><p class="muted">{{ intro }}</p>
+<form method="post" class="card">
+{% for key, typ, label, help in fields %}
+  {% set v = values.get(key) %}
+  {% if typ == 'bool' %}
+    <label><input type="checkbox" name="{{ key }}" {{ 'checked' if v }}> {{ label }}</label>
+  {% else %}
+    <label for="{{ key }}">{{ label }}</label>
+    {% if typ == 'lines' %}<textarea id="{{ key }}" name="{{ key }}">{{ (v or [])|join('\n') }}</textarea>
+    {% elif typ == 'dict' %}<textarea id="{{ key }}" name="{{ key }}">{% for k, val in (v or {}).items() %}{{ k }} = {{ val }}
+{% endfor %}</textarea>
+    {% elif typ == 'secret' %}<input type="password" id="{{ key }}" name="{{ key }}" placeholder="{{ '•••••••• (set)' if v or ctl.token() else 'not set' }}" autocomplete="off">
+    {% elif typ == 'channel' %}
+      <select id="{{ key }}" name="{{ key }}"><option value="">— none —</option>
+      {% for cid, cname in channels %}<option value="{{ cid }}" {{ 'selected' if cid == v|string }}>{{ cname }}</option>{% endfor %}
+      {% if v and channels|selectattr(0, 'equalto', v|string)|list|length == 0 %}<option value="{{ v }}" selected>{{ v }} (unknown)</option>{% endif %}
+      </select>
+    {% elif typ in ('int', 'float') %}<input type="number" step="{{ 'any' if typ == 'float' else '1' }}" id="{{ key }}" name="{{ key }}" value="{{ v }}">
+    {% else %}<input type="text" id="{{ key }}" name="{{ key }}" value="{{ v or '' }}">{% endif %}
+  {% endif %}
+  {% if help %}<small>{{ help }}</small>{% endif %}
+{% endfor %}
+<p><button>Save</button></p>
+</form>
+{% endblock %}

@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block body %}
+<h1>Logs</h1>
+<p class="row">{% for k in ['', 'bot', 'mod', 'troll', 'say', 'error'] %}<a class="pill {{ 'on-pill' if (kind or '') == k }}" href="{{ base }}/logs{{ '?kind=' ~ k if k }}">{{ k or 'all' }}</a>{% endfor %}</p>
+<div class="card"><table>{% for l in rows %}<tr><td class="muted" style="white-space:nowrap">{{ l.ts|ts }}</td><td><span class="pill">{{ l.kind }}</span></td><td>{{ l.message }}</td></tr>
+{% else %}<tr><td class="muted">Empty.</td></tr>{% endfor %}</table></div>
+{% endblock %}
