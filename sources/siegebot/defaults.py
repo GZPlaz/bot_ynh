@@ -188,6 +188,8 @@ CORRECTIONS = {
     "clutch": "choke", "lol": "lol (crying inside)", "pro": "bronze", "carry": "get carried",
 }
 
+from .challenges import CHALLENGES  # noqa: E402
+
 DEFAULTS = {
     "token": "",
     "prefix": "!",
@@ -199,6 +201,8 @@ DEFAULTS = {
     "strats": STRATS,
     "roasts": ROASTS,
     "eight_ball": EIGHT_BALL,
+    "challenges": CHALLENGES,
+    "challenge_bag": {},
     # moderation
     "mod_enabled": True,
     "banned_words": [],

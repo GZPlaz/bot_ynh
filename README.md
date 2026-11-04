@@ -50,7 +50,7 @@ a `duration` like `7d`) `/unban /softban /slowmode /lock /unlock /lockdown /quar
 The panel also has a case browser, quarantine and temp-ban lists, and raid/lockdown buttons.
 
 **Fun**: `/operator`, `/strat`, `/clutch` (1v5 simulation, rigged in your favour), `/teams` (splits your voice channel into teams with operators),
-`/challenge` (random round restriction), `/stats` (made up, and it's always on your side), `/roast` (owners get uno-reversed), `/8ball`, `/rate`, `!help`,
+`/challenge` (160+ round challenges that never repeat until you've done them all; editable), `/stats` (made up, and it's always on your side), `/roast` (owners get uno-reversed), `/8ball`, `/rate`, `!help`,
 plus custom `!commands` and keyword auto-responders that you manage from the panel.
 
 **🏅 Leaderboard**: players are rated Tier 1 (best) to Tier 5 (worst). Anyone can `/tier suggest` a change *with a reason*;
@@ -80,7 +80,7 @@ The 🚨 **Panic button** turns everything off and restores everyone's nicknames
 **Soundboard** (panel → *Soundboard*): 12 built-in synthesized sounds. There are pure noise ones (air horn, alarm, siren, distorted square wave,
 sad trombone) and fake cues (footsteps, drone, defuser, breach, gunfire, reinforcement, glass). They're all original, not game audio.
 You can upload your own clips, play them in any call or follow a specific person into theirs, set the volume up to 1000% (it clips and distorts
-past 100%), make the robot voice (espeak-ng) say anything in someone's call, or use `,,tts @user <text>`, `,,blast @user`, `,,ambush @user` and `,,sound @user air_horn 3` in chat.
+past 100%), import sounds by pasting links (e.g. a MyInstants search page grabs every sound on it, downloaded to your server only), make the robot voice (espeak-ng) say anything in someone's call, or use `,,tts @user <text>`, `,,blast @user`, `,,ambush @user` and `,,sound @user air_horn 3` in chat.
 
 ## 🧬 Opt-in voice clones
 Friends who *want* to be cloned run `/voiceclone optin`, choose who may use their voice (bot owners only, or everyone), and upload

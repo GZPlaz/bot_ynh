@@ -76,6 +76,19 @@
   <td><audio controls preload="none" src="{{ base }}/sounds/file/{{ s.name }}"></audio></td>
   <td>{% if not s.builtin %}<form method="post" action="{{ base }}/sounds/{{ s.name }}/delete"><button class="ghost">Delete</button></form>{% else %}<span class="pill">built-in</span>{% endif %}</td></tr>{% endfor %}</table>
 </div>
+<form method="post" action="{{ base }}/sounds/import" class="card">
+  <h3 style="margin-top:0">Import from links (MyInstants etc.)</h3>
+  <p class="muted">Paste up to 50 links, one per line:</p>
+  <ul class="muted">
+    <li>a <b>MyInstants search or list page</b>, e.g. <code>https://www.myinstants.com/en/search/?name=r6</code>, imports every sound on it (up to 100)</li>
+    <li>a single <b>MyInstants sound page</b></li>
+    <li>a <b>direct audio link</b> (.mp3, .ogg, .wav…)</li>
+  </ul>
+  <p class="muted">Sounds are downloaded to this server only, and ones you already have are skipped.</p>
+  <textarea name="urls" placeholder="https://www.myinstants.com/en/search/?name=r6" style="min-height:80px"></textarea>
+  <p><button>Import</button></p>
+  <small>Most clips on sites like MyInstants are ripped from games and media, so keep them on your own server for your group. They're never added to the bot's code or GitHub.</small>
+</form>
 <form method="post" action="{{ base }}/sounds/upload" enctype="multipart/form-data" class="card">
   <h3 style="margin-top:0">Upload your own</h3>
   <div class="row"><input type="text" name="name" placeholder="name (optional)" style="max-width:220px">

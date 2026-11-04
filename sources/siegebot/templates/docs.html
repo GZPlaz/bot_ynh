@@ -61,6 +61,9 @@
 {% endfor %}
 <p class="muted">Durations look like <code>30s</code>, <code>10m</code>, <code>2h</code>, <code>7d</code>, <code>1w</code>, or combined, like <code>1h30m</code>. <code>/ban</code> with a duration is a temp-ban that lifts itself.</p>
 
+<p><b>/challenge</b> draws from the challenge list (Personality page) like a shuffled deck: no challenge repeats until every one has come up, separately for each server.
+It shows the progress (e.g. "Challenge 12/164"), and a new loop never opens with the one that just closed the last.</p>
+
 <h2 id="automod">5. Automod &amp; heat</h2>
 <p>Automod skips owners, the server owner, whitelisted users and roles, exempt roles, and anyone with Manage Messages.</p>
 <h3>Filters</h3>
@@ -134,6 +137,7 @@ Change this in <a href="{{ base }}/settings/trollcfg">Troll Arsenal</a>. Type th
 <table>{% for name, desc in d.builtin_sounds.items() %}<tr><td><code>{{ name }}</code></td><td>{{ desc }}</td></tr>{% endfor %}</table>
 <ul>
   <li><b>Upload</b> your own clips (mp3/wav/ogg/opus/m4a/flac/webm, up to 8 MB). Recorded fake callouts work great.</li>
+  <li><b>Import from links:</b> paste MyInstants search pages (every sound on the page), single MyInstants sound pages, or direct audio links. Imports run in the background, skip sounds you already have, and report in Logs → sound. They're stored on your server only.</li>
   <li><b>Volume</b> above 100% clips and distorts on purpose. <b>Max length</b> caps any clip.</li>
   <li><b>Target a member</b> to follow them into whatever channel they're in.</li>
   <li><b>Robot voice (text-to-speech):</b> type anything and pick a voice. "The target's personal robot voice" is the same voice the <code>read_aloud</code> troll uses for that person, so they'll learn to fear it.</li>

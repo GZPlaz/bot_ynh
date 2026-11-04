@@ -1,4 +1,5 @@
 """Admin panel. Sits behind YunoHost SSO (nginx); only listens on 127.0.0.1."""
+import asyncio
 import os
 import re
 import time
@@ -93,6 +94,7 @@ SECTIONS = {
         ("roasts", "lines", "/roast lines", "Use {target}."),
         ("strats", "lines", "/strat lines", ""),
         ("eight_ball", "lines", "/8ball answers", ""),
+        ("challenges", "lines", "/challenge list", "One per line. /challenge never repeats one until it has gone through all of them (per server). Edits are picked up mid-loop."),
     ]),
     "voice": ("Robot Voice & Clones", "Lines for the robot voice trolls, and the optional voice-clone service. "
               "Clones only exist for people who ran /voiceclone optin themselves; you can't upload anyone's voice from here.", [
@@ -656,6 +658,34 @@ def create_app(db, ctl, data_dir, base_path):
                         fh.write(chunk)
                 saved = name
         go("/sounds", f"Uploaded '{saved}'." if saved else "No file received.")
+
+    import_tasks = set()
+
+    @routes.post("/sounds/import")
+    async def sounds_import(request):
+        from .sound_import import import_urls
+        f = await request.post()
+        urls = [u.strip() for u in (f.get("urls") or "").splitlines() if u.strip()][:50]
+        if not urls:
+            go("/sounds", "Paste at least one link.")
+
+        async def job():
+            db.log("sound", f"Import started: {len(urls)} link(s)")
+            try:
+                r = await import_urls(urls, data_dir)
+            except Exception as e:  # never let a bad page kill the panel
+                db.log("error", f"Sound import crashed: {e}")
+                return
+            db.log("sound", f"Import done: {len(r['added'])} added, {len(r['skipped'])} already had, {len(r['failed'])} failed")
+            if r["added"]:
+                db.log("sound", "Added: " + ", ".join(r["added"])[:900])
+            for fail in r["failed"][:20]:
+                db.log("sound", f"Import failed: {fail}")
+
+        t = asyncio.get_running_loop().create_task(job())
+        import_tasks.add(t)
+        t.add_done_callback(import_tasks.discard)
+        go("/sounds", f"Importing from {len(urls)} link(s) in the background. Refresh in a minute; details in Logs → sound.")
 
     @routes.post("/sounds/{name}/delete")
     async def sounds_delete(request):
