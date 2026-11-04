@@ -692,6 +692,8 @@ def create_app(db, ctl, data_dir, base_path):
         s = sound_lib.find_sound(data_dir, request.match_info["name"])
         if s and not s["builtin"]:
             os.remove(s["file"])
+            if s.get("pack"):
+                sound_lib.mark_removed(data_dir, s["name"])  # don't bring it back on restart
         go("/sounds", "Deleted." if s and not s["builtin"] else "Built-in sounds can't be deleted.")
 
     # ---------------- leaderboard

@@ -42,6 +42,13 @@ async def _public_host(url: str) -> bool:
     return True
 
 
+def _same_bytes(path, data):
+    try:
+        return os.path.getsize(path) == len(data) and open(path, "rb").read() == data
+    except OSError:
+        return False
+
+
 def _name_for(url: str) -> str:
     stem = os.path.splitext(os.path.basename(unquote(urlparse(url).path)))[0].lower()
     stem = re.sub(r"_[A-Za-z0-9]{6,7}$", "", stem)  # drop MyInstants' random dedupe suffix
@@ -68,9 +75,6 @@ async def _save_audio(http, url, sound_dir, results):
         name = f"{name}_import"
     ext = os.path.splitext(urlparse(url).path)[1].lower()
     ext = ext if ext in sound_lib.AUDIO_EXT else ".mp3"
-    if any(os.path.exists(os.path.join(sound_dir, name + e)) for e in sound_lib.AUDIO_EXT):
-        results["skipped"].append(name)
-        return
     if not await _public_host(url):
         results["failed"].append(f"{url} (not a public address)")
         return
@@ -82,6 +86,18 @@ async def _save_audio(http, url, sound_dir, results):
     if not _looks_like_audio(data[:12]):
         results["failed"].append(f"{name} (not an audio file)")
         return
+    # same name already taken? identical file -> skip; different sound -> keep both as name_2, name_3...
+    base, n = name, 1
+    while True:
+        existing = [os.path.join(sound_dir, name + e) for e in sound_lib.AUDIO_EXT
+                    if os.path.exists(os.path.join(sound_dir, name + e))]
+        if not existing:
+            break
+        if any(_same_bytes(p, data) for p in existing):
+            results["skipped"].append(name)
+            return
+        n += 1
+        name = f"{base[:37]}_{n}"
     with open(os.path.join(sound_dir, name + ext), "wb") as fh:
         fh.write(data)
     results["added"].append(name)

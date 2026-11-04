@@ -133,7 +133,8 @@ Change this in <a href="{{ base }}/settings/trollcfg">Troll Arsenal</a>. Type th
 <table>{% for cmd, desc in d.hidden %}<tr><td style="white-space:nowrap"><code>{{ cmd }}</code></td><td>{{ desc }}</td></tr>{% endfor %}</table>
 
 <h2 id="sound">11. Soundboard &amp; robot voice</h2>
-<p>The bot joins a call, plays, and leaves. Built-in sounds are synthesized originals, not game audio:</p>
+<p>The bot joins a call, plays, and leaves. It ships with an <b>R6 sound pack</b> (59 clips from MyInstants' "r6" search, tagged "R6 pack" on the Soundboard).
+Deleting a pack sound is remembered, so it won't come back on restart. There are also 12 synthesized sounds:</p>
 <table>{% for name, desc in d.builtin_sounds.items() %}<tr><td><code>{{ name }}</code></td><td>{{ desc }}</td></tr>{% endfor %}</table>
 <ul>
   <li><b>Upload</b> your own clips (mp3/wav/ogg/opus/m4a/flac/webm, up to 8 MB). Recorded fake callouts work great.</li>

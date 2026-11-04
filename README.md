@@ -77,7 +77,9 @@ A **join announcer** greets them ("Please lower your expectations"), a **sports 
 them instantly (`,,help` DMs you the list).
 The 🚨 **Panic button** turns everything off and restores everyone's nicknames.
 
-**Soundboard** (panel → *Soundboard*): 12 built-in synthesized sounds. There are pure noise ones (air horn, alarm, siren, distorted square wave,
+**Soundboard** (panel → *Soundboard*): ships with an **R6 sound pack** of 59 clips from MyInstants' "r6" search
+(nitro cell, Lion scan, defuser alarm, Fuze cluster charge…), plus 12 built-in synthesized sounds.
+⚠️ The pack is mostly ripped game audio, so **keep this repository private**. There are pure noise ones (air horn, alarm, siren, distorted square wave,
 sad trombone) and fake cues (footsteps, drone, defuser, breach, gunfire, reinforcement, glass). They're all original, not game audio.
 You can upload your own clips, play them in any call or follow a specific person into theirs, set the volume up to 1000% (it clips and distorts
 past 100%), import sounds by pasting links (e.g. a MyInstants search page grabs every sound on it, downloaded to your server only), make the robot voice (espeak-ng) say anything in someone's call, or use `,,tts @user <text>`, `,,blast @user`, `,,ambush @user` and `,,sound @user air_horn 3` in chat.
