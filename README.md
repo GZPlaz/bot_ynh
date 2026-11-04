@@ -59,7 +59,10 @@ shuffles, 5-second server mutes, 🔊 **voice ambushes** (the bot joins their ca
 or the loudest noise in the arsenal), rigged `/stats`, cursed `/operator` picks, and fake "official" report DMs, nickname lock (rename yourself back → new humiliating name), 30–90s micro-timeouts
 with absurd reasons, voice disconnects, a hoisted hot-pink role of shame, a typing sniper ("nobody asked" before they hit enter),
 parrot mode, ghost-ping sprees across 5 channels, and voice chaos: 6-second deafens, a "dying mic" mute stutter, a 20-second solo voice
-jail, a robot voice yelling fake callouts in their call, and potato mode (their channel drops to 8 kbps for 2 minutes). Trolls fire at random based on
+jail, a robot voice yelling fake callouts in their call, and potato mode (their channel drops to 8 kbps for 2 minutes).
+Robot-voice chaos: every victim gets their own personal robot voice, which **reads their text messages aloud** while they're in voice.
+A **join announcer** greets them ("Please lower your expectations"), a **sports commentator** narrates the moment they type "dead",
+"rip" or "my bad", and the robot can **read their stats to the whole call**. Trolls fire at random based on
 *chance × chaos*, from a timed loop, or on demand from the panel. As an owner you can also type secret `,,` commands in chat; the bot deletes
 them instantly (`,,help` DMs you the list).
 The 🚨 **Panic button** turns everything off and restores everyone's nicknames.
@@ -68,6 +71,23 @@ The 🚨 **Panic button** turns everything off and restores everyone's nicknames
 sad trombone) and fake cues (footsteps, drone, defuser, breach, gunfire, reinforcement, glass). They're all original, not game audio.
 You can upload your own clips, play them in any call or follow a specific person into theirs, set the volume up to 1000% (it clips and distorts
 past 100%), make the robot voice (espeak-ng) say anything in someone's call, or use `,,tts @user <text>`, `,,blast @user`, `,,ambush @user` and `,,sound @user air_horn 3` in chat.
+
+## 🧬 Opt-in voice clones
+Friends who *want* to be cloned run `/voiceclone optin`, choose who may use their voice (bot owners only, or everyone), and upload
+10–30 s of **their own** voice with `/voiceclone sample` (a Discord voice message works). After that, `/mimic @friend <text>`,
+`,,clone @friend <text>` or the Soundboard page make their AI voice say anything in a call. `/voiceclone optout` deletes the sample instantly.
+Nobody can upload someone else's voice, not even from the admin panel.
+
+Cloning needs a heavy AI model (Chatterbox, MIT-licensed, about 4 GB RAM; a GPU makes it fast), so it runs as a **separate optional service**.
+That can be on your YunoHost box if it has the RAM, or on a gaming PC:
+```bash
+cd clone_server
+python3 -m venv venv && venv/bin/pip install -r requirements.txt
+CLONE_TOKEN=pick-a-long-secret venv/bin/python server.py --host 0.0.0.0 --port 8765 --device cuda   # or cpu
+```
+Then enter `http://<that-machine>:8765` and the token in the panel under **Robot Voice & Clones**, and hit *Test clone service*.
+Chatterbox adds an inaudible watermark to everything it generates. On CPU, expect roughly 10–40 s per sentence.
+`clone_server/siegebot-clone.service` is an example systemd unit.
 
 ## Layout
 `manifest.toml`, `scripts/`, `conf/` are the YunoHost package. `sources/siegebot/` holds the bot and panel (discord.py + aiohttp + SQLite in `/home/yunohost.app/siegebot`).

@@ -28,6 +28,20 @@ CLUTCH_EVENTS = [
 RANKS = ["Copper V", "Bronze III", "Silver II", "Gold I", "Platinum", "Emerald", "Diamond", "Champion"]
 
 
+def fake_stats(bot, member):
+    """Deterministic fake stats. Owners are gods, fake_stats targets are tragic."""
+    seed = int(hashlib.md5(str(member.id).encode()).hexdigest(), 16)
+    rng = random.Random(seed)
+    t = bot.db.target(member.id) if bot.db.get("trolls_enabled") else None
+    if bot.is_boss(member):
+        kd, wr, hs, rank = rng.uniform(2.5, 4.2), rng.uniform(70, 90), rng.uniform(55, 75), "Champion (obviously)"
+    elif t and "fake_stats" in t["trolls"]:
+        kd, wr, hs, rank = rng.uniform(0.05, 0.35), rng.uniform(3, 18), rng.uniform(0.1, 4), "Copper V (hardstuck)"
+    else:
+        kd, wr, hs, rank = rng.uniform(0.7, 1.4), rng.uniform(40, 60), rng.uniform(20, 45), rng.choice(RANKS)
+    return {"kd": kd, "wr": wr, "hs": hs, "rank": rank, "seed": seed}
+
+
 class Fun(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -55,14 +69,9 @@ class Fun(commands.Cog):
     @app_commands.command(description="Look up someone's (extremely accurate) stats")
     async def stats(self, inter: discord.Interaction, member: discord.Member = None):
         member = member or inter.user
-        seed = int(hashlib.md5(str(member.id).encode()).hexdigest(), 16)
-        rng = random.Random(seed)
-        if self.bot.is_boss(member):
-            kd, wr, hs, rank = rng.uniform(2.5, 4.2), rng.uniform(70, 90), rng.uniform(55, 75), "Champion (obviously)"
-        elif self.trolled(member, "fake_stats"):
-            kd, wr, hs, rank = rng.uniform(0.05, 0.35), rng.uniform(3, 18), rng.uniform(0.1, 4), "Copper V (hardstuck)"
-        else:
-            kd, wr, hs, rank = rng.uniform(0.7, 1.4), rng.uniform(40, 60), rng.uniform(20, 45), rng.choice(RANKS)
+        st = fake_stats(self.bot, member)
+        kd, wr, hs, rank = st["kd"], st["wr"], st["hs"], st["rank"]
+        rng = random.Random(st["seed"])
         e = discord.Embed(title=f"📊 Stats for {member.display_name}", color=0xF5A623)
         e.add_field(name="Rank", value=rank)
         e.add_field(name="K/D", value=f"{kd:.2f}")

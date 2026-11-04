@@ -12,7 +12,8 @@ DEFENDERS = ["Smoke", "Mute", "Castle", "Pulse", "Doc", "Rook", "Kapkan", "Tacha
 TROLL_TYPES = ["react", "mock", "typing", "correct", "nickname", "ghost_ping", "fake_ban", "voice_shuffle",
                "voice_mute", "fake_stats", "cursed_ops", "dm_report", "sound_ambush", "noise_blast",
                "nick_lock", "micro_timeout", "voice_kick", "role_of_shame", "typing_sniper", "parrot", "ping_spree",
-               "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode"]
+               "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode",
+               "read_aloud", "join_announcer", "commentator", "stat_readout"]
 
 TROLL_DESCRIPTIONS = {
     "react": "Randomly reacts to their messages with clowns, salt and skulls",
@@ -41,6 +42,10 @@ TROLL_DESCRIPTIONS = {
     "voice_jail": "Drags them alone into a locked '🔒 Timeout Corner' channel for 20 seconds, then back",
     "fake_callout": "Bot joins their call and a robot voice yells fake callouts ('TWO IN BASEMENT!')",
     "potato_mode": "Drops their voice channel to 8 kbps for 2 minutes. Everyone sounds like a potato.",
+    "read_aloud": "While they're in voice, the bot reads their text messages out loud in their own personal robot voice",
+    "join_announcer": "Every time they join a voice channel, a robot announces their arrival. Warmly. (Not warmly.)",
+    "commentator": "Typing 'dead', 'rip', 'my bad', 'nt'... triggers a sports commentator narrating their failure in the call",
+    "stat_readout": "Robot voice reads their (tragic) stats to the whole call",
 }
 
 SASS_LINES = [
@@ -146,6 +151,23 @@ FAKE_CALLOUTS = [
     "Defuser is planted! Go go go!", "Roamer in garage, rotate!", "They're flanking left, watch left!",
     "Breach on main wall, get off the wall!", "Nitro cell! Move!", "I'm dead, it was Dave's fault.",
     "Enemy drone in your room. Shoot it. Shoot it now.", "He's tea bagging me. Avenge me.",
+]
+
+COMMENTATOR_LINES = [
+    "And {user} is DOWN! Absolutely devastating scenes here. The crowd is silent.",
+    "Oh no. Oh no no no. {user} has fallen. Again. Somebody check on the family.",
+    "{user} goes down like a reinforced wall to a Thermite charge. Textbook.",
+    "That's a classic {user} play, folks. Walk in, die, apologize.",
+    "Replay shows {user} did absolutely nothing wrong except everything.",
+    "And with that, {user}'s K D drops below the legal limit.",
+]
+
+ANNOUNCER_LINES = [
+    "Attention. {user} has joined the channel. Please lower your expectations.",
+    "Warning. A wild {user} has appeared. Hide your hostages.",
+    "Ladies and gentlemen, the bottom frag has arrived. Welcome, {user}.",
+    "{user} has entered. Team win probability decreased by forty percent.",
+    "Oh good. {user} is here. Everybody act natural.",
 ]
 
 JAIL_NAMES = ["🔒 Timeout Corner", "🔒 Think About Your Rotates", "🔒 Copper Containment Unit", "🔒 Spawn Peek Jail"]
@@ -259,6 +281,11 @@ DEFAULTS = {
     "shame_minutes": 30,
     "fake_callouts": FAKE_CALLOUTS,
     "jail_names": JAIL_NAMES,
+    "commentator_lines": COMMENTATOR_LINES,
+    "announcer_lines": ANNOUNCER_LINES,
+    "clone_api_url": "",
+    "clone_api_token": "",
+    "clone_exaggeration": 0.6,
     "shame_roles": {},     # guild_id -> role_id
     "shame_expiry": {},    # "guild:user" -> ts
 }

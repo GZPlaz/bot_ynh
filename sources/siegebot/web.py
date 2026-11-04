@@ -94,6 +94,15 @@ SECTIONS = {
         ("strats", "lines", "/strat lines", ""),
         ("eight_ball", "lines", "/8ball answers", ""),
     ]),
+    "voice": ("Robot Voice & Clones", "Lines for the robot voice trolls, and the optional voice-clone service. "
+              "Clones only exist for people who ran /voiceclone optin themselves; you can't upload anyone's voice from here.", [
+        ("commentator_lines", "lines", "Death commentator lines", "Use {user}."),
+        ("announcer_lines", "lines", "Voice join announcer lines", "Use {user}."),
+        ("fake_callouts", "lines", "Fake voice callouts", ""),
+        ("clone_api_url", "str", "Voice clone service URL", "e.g. http://127.0.0.1:8765 (see clone_server/ in the repo). Leave empty to disable."),
+        ("clone_api_token", "secret", "Voice clone service token", "Same as CLONE_TOKEN on the service. Leave blank to keep."),
+        ("clone_exaggeration", "float", "Clone expressiveness", "0.25 = calm, 0.5 = normal, 1.0+ = unhinged."),
+    ]),
     "trollcfg": ("Troll Arsenal", "The content used by the secret trolls.", [
         ("nicknames", "lines", "Humiliating nicknames", "Max 32 characters each."),
         ("reactions", "lines", "Reaction emojis", ""),
@@ -106,7 +115,6 @@ SECTIONS = {
         ("timeout_reasons", "lines", "Micro-timeout reasons", ""),
         ("shame_role_names", "lines", "Role-of-shame names", "Max 100 characters."),
         ("shame_minutes", "int", "Role of shame lasts (minutes)", ""),
-        ("fake_callouts", "lines", "Fake voice callouts (spoken by robot voice)", ""),
         ("jail_names", "lines", "Voice jail channel names", ""),
     ]),
 }
@@ -229,7 +237,7 @@ def create_app(db, ctl, data_dir, base_path):
             elif typ == "secret":
                 if not raw.strip():
                     continue
-                val, restart = raw.strip(), True
+                val, restart = raw.strip(), key == "token"
             else:
                 val = raw.strip()
             if key == "owner_ids":
@@ -437,7 +445,9 @@ def create_app(db, ctl, data_dir, base_path):
             vchans = [(str(c.id), f"{g.name} / 🔊 {c.name} ({len(c.members)})") for g in b.guilds for c in g.voice_channels]
             members = [(str(m.id), f"{m.display_name} in 🔊 {m.voice.channel.name}") for g in b.guilds
                        for m in g.members if m.voice and m.voice.channel and not m.bot]
+        clones = db.q("SELECT * FROM voice_clones ORDER BY user_name")
         return render("sounds.html", request, sounds=sound_lib.list_sounds(data_dir), vchans=vchans, members=members,
+                      clones=clones, clone_url=db.get("clone_api_url"),
                       volume=db.get("sound_volume"), max_seconds=db.get("sound_max_seconds"))
 
     @routes.get("/sounds/file/{name}")
@@ -495,8 +505,39 @@ def create_app(db, ctl, data_dir, base_path):
             channel = b.get_channel(int(target[2:]))
         if not channel or not text:
             go("/sounds", "Type something and pick a voice channel/member that's in voice.")
-        b.loop.create_task(b.get_cog("Soundboard").speak(channel, text[:300]))
+        board, voice = b.get_cog("Soundboard"), f.get("voice", "robot")
+        if voice.startswith("clone:"):
+            b.loop.create_task(board.clone_speak(channel, int(voice[6:]), text[:300]))
+            go("/sounds", f"🗣️ Generating the clone voice for {channel.name} (can take a while on CPU). Check Logs if nothing plays.")
+        victim = int(target[2:]) if voice == "victim" and target.startswith("m:") else None
+        b.loop.create_task(board.speak(channel, text[:300], user_id=victim))
         go("/sounds", f"🗣️ Saying it in {channel.name}.")
+
+    @routes.post("/clones/{uid}/delete")
+    async def clones_delete(request):
+        b = bot()
+        if b:
+            b.get_cog("VoiceClone").delete(int(request.match_info["uid"]))
+        else:
+            row = db.q("SELECT * FROM voice_clones WHERE user_id=?", (int(request.match_info["uid"]),), one=True)
+            if row and row["sample"] and os.path.exists(row["sample"]):
+                os.remove(row["sample"])
+            db.q("DELETE FROM voice_clones WHERE user_id=?", (int(request.match_info["uid"]),))
+        go("/sounds", "Voice clone deleted.")
+
+    @routes.post("/clones/test")
+    async def clones_test(request):
+        import aiohttp
+        url = (db.get("clone_api_url") or "").rstrip("/")
+        if not url:
+            go("/settings/voice", "Set the clone service URL first.")
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as http:
+                async with http.get(url + "/health") as r:
+                    msg = f"Clone service OK: {await r.text()}" if r.status == 200 else f"Clone service answered {r.status}"
+        except Exception as e:
+            msg = f"Can't reach clone service: {e or type(e).__name__}"
+        go("/sounds", msg)
 
     @routes.post("/sounds/stop")
     async def sounds_stop(request):

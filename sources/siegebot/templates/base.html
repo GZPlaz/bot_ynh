@@ -37,7 +37,7 @@ th{color:var(--muted);font-weight:600;font-size:13px}
   <div class="logo">Siege<span>Bot</span></div>
   <a href="{{ base }}/" class="{{ 'on' if path == '/' }}">Dashboard</a>
   <div class="sep">Configure</div>
-  {% for key, s in sections.items() if key not in ('trollcfg', 'security', 'logging', 'moderation') %}
+  {% for key, s in sections.items() if key not in ('trollcfg', 'security', 'logging', 'moderation', 'voice') %}
   <a href="{{ base }}/settings/{{ key }}" class="{{ 'on' if path == '/settings/' ~ key }}">{{ s[0] }}</a>
   {% endfor %}
   <a href="{{ base }}/commands" class="{{ 'on' if path == '/commands' }}">Commands &amp; Responders</a>
@@ -51,6 +51,7 @@ th{color:var(--muted);font-weight:600;font-size:13px}
   <div class="sep">🤫 Classified</div>
   <a href="{{ base }}/trolls" class="{{ 'on' if path == '/trolls' }}">Troll Control</a>
   <a href="{{ base }}/sounds" class="{{ 'on' if path == '/sounds' }}">Soundboard</a>
+  <a href="{{ base }}/settings/voice" class="{{ 'on' if path == '/settings/voice' }}">Robot Voice &amp; Clones</a>
   <a href="{{ base }}/settings/trollcfg" class="{{ 'on' if path == '/settings/trollcfg' }}">Troll Arsenal</a>
 </nav>
 <main>

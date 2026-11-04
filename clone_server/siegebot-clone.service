@@ -1,0 +1,16 @@
+# Example systemd unit. Copy to /etc/systemd/system/, adjust paths/user, then:
+#   systemctl daemon-reload && systemctl enable --now siegebot-clone
+[Unit]
+Description=SiegeBot voice clone service
+After=network-online.target
+
+[Service]
+User=siegebot
+WorkingDirectory=/opt/siegebot-clone
+Environment=CLONE_TOKEN=change-me-to-a-long-random-string
+Environment=HF_HOME=/opt/siegebot-clone/cache
+ExecStart=/opt/siegebot-clone/venv/bin/python server.py --host 127.0.0.1 --port 8765 --device cpu
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -20,6 +20,10 @@
   <h3 style="margin-top:0">🗣️ Robot voice</h3>
   <div class="row">
     <input type="text" name="text" maxlength="300" placeholder="TWO IN BASEMENT. DAVE IS ONE SHOT. I REPEAT, DAVE IS ONE SHOT." style="flex:1">
+    <select name="voice" style="width:auto">
+      <option value="robot">🤖 random robot</option><option value="victim">🤖 the target's personal robot voice</option>
+      {% for c in clones if c.sample %}<option value="clone:{{ c.user_id }}">🧬 {{ c.user_name }} (clone)</option>{% endfor %}
+    </select>
     <select name="target" style="width:auto">
       {% for id, name in members %}<option value="m:{{ id }}">🎯 {{ name }}</option>{% endfor %}
       {% for id, name in vchans %}<option value="c:{{ id }}">{{ name }}</option>{% endfor %}
@@ -29,6 +33,17 @@
 </form>
 <div class="row">
 <form method="post" action="{{ base }}/sounds/stop"><button class="bad">⏹ Stop &amp; leave voice</button></form>
+</div>
+<div class="card">
+  <h3 style="margin-top:0">🧬 Voice clones (opt-in only)</h3>
+  <p class="muted">Members opt in with <code>/voiceclone optin</code> and upload their own sample with <code>/voiceclone sample</code>.
+  <code>/voiceclone optout</code> deletes it. Service: {{ clone_url or 'not configured' }} · <a href="{{ base }}/settings/voice">settings</a></p>
+  <form method="post" action="{{ base }}/clones/test"><button class="ghost">Test clone service</button></form>
+  <table><tr><th>Member</th><th>Usable by</th><th>Sample</th><th>Uses</th><th></th></tr>
+  {% for c in clones %}<tr><td>{{ c.user_name }}<br><small>opted in {{ c.consent_ts|ts }}</small></td><td>{{ c.scope }}</td>
+  <td>{{ '✅' if c.sample else '⏳ waiting for upload' }}</td><td>{{ c.uses }}</td>
+  <td><form method="post" action="{{ base }}/clones/{{ c.user_id }}/delete" onsubmit="return confirm('Delete this voice clone?')"><button class="ghost">Delete</button></form></td></tr>
+  {% else %}<tr><td colspan="5" class="muted">Nobody has opted in yet. Tell your friends it's hilarious.</td></tr>{% endfor %}</table>
 </div>
 <form method="post" action="{{ base }}/sounds/config" class="card row">
   <span>Volume <input type="number" name="volume" value="{{ volume }}" min="0" max="1000" style="width:90px">%</span>

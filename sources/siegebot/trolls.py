@@ -14,12 +14,14 @@ from .util import chance, fill, spongebob
 
 log = logging.getLogger("siegebot.trolls")
 
-PASSIVE = ["react", "mock", "typing", "correct", "parrot"]
+PASSIVE = ["react", "mock", "typing", "correct", "parrot", "read_aloud"]
+DEATH_RE = re.compile(r"\b(dead|died|i'?m down|rip|my bad|mb|nt|nice try|bruh|ff|gg go next|lag)\b", re.I)
 ACTIVE = ["nickname", "ghost_ping", "fake_ban", "voice_shuffle", "voice_mute", "dm_report", "sound_ambush", "noise_blast",
           "micro_timeout", "voice_kick", "role_of_shame", "ping_spree", "parrot",
-          "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode"]
+          "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode", "stat_readout"]
 VOICE_ACTIONS = ("voice_shuffle", "voice_mute", "sound_ambush", "noise_blast", "voice_kick",
-                 "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode")
+                 "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode", "stat_readout",
+                 "commentator", "join_announcer")
 RARE = ("fake_ban", "dm_report", "micro_timeout", "voice_kick", "role_of_shame")
 ACTIONS = {
     "nickname": "Rename", "restore_nick": "Restore nickname", "ghost_ping": "Ghost ping",
@@ -30,13 +32,14 @@ ACTIONS = {
     "remove_shame": "Remove role of shame", "ping_spree": "Ghost-ping spree", "parrot": "Parrot mode (3 min)",
     "voice_deafen": "Deafen 6s", "voice_stutter": "Mic stutter", "voice_jail": "Voice jail 20s",
     "fake_callout": "Robot fake callout", "potato_mode": "Potato mode (8 kbps, 2 min)",
+    "commentator": "Death commentary", "join_announcer": "Robot announcement", "stat_readout": "Read stats aloud",
 }
 HIDDEN = {"nick": "nickname", "unnick": "restore_nick", "ghost": "ghost_ping", "fakeban": "fake_ban",
           "shuffle": "voice_shuffle", "mute": "voice_mute", "report": "dm_report", "mock": "mock_next",
           "ambush": "sound_ambush", "blast": "noise_blast", "tout": "micro_timeout", "vkick": "voice_kick",
           "shame": "role_of_shame", "unshame": "remove_shame", "spree": "ping_spree", "parrot": "parrot",
           "deafen": "voice_deafen", "stutter": "voice_stutter", "jail": "voice_jail", "callout": "fake_callout",
-          "potato": "potato_mode"}
+          "potato": "potato_mode", "dead": "commentator", "announce": "join_announcer", "readstats": "stat_readout"}
 
 
 class Trolls(commands.Cog):
@@ -48,6 +51,7 @@ class Trolls(commands.Cog):
         self.parrots = {}  # user_id -> ts until
         self.sniped = {}  # user_id -> last snipe ts
         self.potato = {}  # voice channel id -> original bitrate
+        self.voice_cooldown = {}  # (user_id, kind) -> ts
         self.renaming = set()  # ids the bot is renaming right now (so nick_lock ignores our own edits)
 
     async def cog_load(self):
@@ -343,6 +347,49 @@ class Trolls(commands.Cog):
         asyncio.get_running_loop().call_later(120, lambda: asyncio.ensure_future(self.unpotato(ch.id)))
         return f"{ch.name} is now 8 kbps for 2 min"
 
+    # ------------------------------------------------------------------ robot voice chaos
+    def cooled(self, user_id, kind, seconds):
+        """True if this (user, kind) is off cooldown, and starts the cooldown."""
+        if time.time() - self.voice_cooldown.get((user_id, kind), 0) < seconds:
+            return False
+        self.voice_cooldown[(user_id, kind)] = time.time()
+        return True
+
+    async def say_in_call(self, member, text, own_voice=False):
+        if not member.voice or not member.voice.channel:
+            return "not in voice"
+        board = self.bot.get_cog("Soundboard")
+        return await board.speak(member.voice.channel, text, user_id=member.id if own_voice else None)
+
+    async def do_commentator(self, member, channel=None):
+        line = fill(random.choice(self.db.get("commentator_lines")), user=member.display_name)
+        return await self.say_in_call(member, line)
+
+    async def do_join_announcer(self, member, channel=None):
+        line = fill(random.choice(self.db.get("announcer_lines")), user=member.display_name)
+        return await self.say_in_call(member, line)
+
+    async def do_stat_readout(self, member, channel=None):
+        from .fun import fake_stats
+        st = fake_stats(self.bot, member)
+        text = (f"Attention everyone. Official stat report for {member.display_name}. Rank: {st['rank']}. "
+                f"K D: {st['kd']:.2f}. Win rate: {st['wr']:.0f} percent. Headshot percentage: {st['hs']:.0f}. "
+                + ("Truly legendary." if st["kd"] > 2 else "Thank you for your attention. Please be kind to them."))
+        return await self.say_in_call(member, text)
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        if member.bot or not after.channel or before.channel == after.channel or not self.enabled():
+            return
+        if self.bot.stealth.get(member.id, 0) > time.time():  # we moved them (jail/shuffle), not a real join
+            return
+        t = self.db.target(member.id)
+        if not t or "join_announcer" not in t["trolls"] or not chance(self.odds(t, 4)):
+            return
+        if self.cooled(member.id, "announce", 300):
+            await asyncio.sleep(random.uniform(1.5, 4))
+            await self.run_action("join_announcer", member)
+
     async def unpotato(self, channel_id=None):
         for cid in [channel_id] if channel_id else list(self.potato):
             ch = self.bot.get_channel(cid)
@@ -405,7 +452,12 @@ class Trolls(commands.Cog):
         t = self.db.target(message.author.id)
         if not t:
             return
-        options = [p for p in PASSIVE if p in t["trolls"]]
+        in_voice = bool(getattr(message.author, "voice", None) and message.author.voice.channel)
+        if in_voice and "commentator" in t["trolls"] and message.content and DEATH_RE.search(message.content) \
+                and chance(self.odds(t, 4)) and self.cooled(message.author.id, "commentator", 60):
+            asyncio.create_task(self.run_action("commentator", message.author))
+            return
+        options = [p for p in PASSIVE if p in t["trolls"] and (p != "read_aloud" or in_voice)]
         if not options or not chance(self.odds(t)):
             return
         kind = random.choice(options)
@@ -422,6 +474,11 @@ class Trolls(commands.Cog):
                 fixed = self.corrupt(message.content)
                 if fixed != message.content:
                     await message.reply(f"*{fixed}", mention_author=False)
+            elif kind == "read_aloud" and message.content and self.cooled(message.author.id, "read", 20):
+                text = re.sub(r"<[@#:][^>]+>|https?://\S+", "", message.content)[:250]
+                if text.strip():
+                    asyncio.create_task(self.say_in_call(message.author, f"{message.author.display_name} says: {text}",
+                                                         own_voice=True))
             elif kind == "parrot":
                 self.parrots[message.author.id] = time.time() + 180
                 await message.channel.send(message.content[:2000] or "🦜", allowed_mentions=discord.AllowedMentions.none())
@@ -465,6 +522,8 @@ class Trolls(commands.Cog):
         ,,shame @user  ,,unshame @user  ,,spree @user  ,,parrot @user
         ,,deafen @user  ,,stutter @user  ,,jail @user  ,,callout @user  ,,potato @user
         ,,tts @user <text>   (robot voice says anything in their call)
+        ,,dead @user  ,,announce @user  ,,readstats @user
+        ,,clone @user <text>   (opted-in voice clone of @user speaks in YOUR call, or theirs if you're not in one)
         ,,sound @user <name> [times]   (or ,,sound <name> to play in YOUR channel)  ,,stop  ,,sounds
         ,,target @user  ,,untarget @user  ,,chaos 2  ,,on  ,,off  ,,panic"""
         try:
@@ -492,6 +551,11 @@ class Trolls(commands.Cog):
             if member.voice and member.voice.channel:
                 self.bot.stealth[member.id] = time.time() + 30
                 asyncio.create_task(self.bot.get_cog("Soundboard").speak(member.voice.channel, text))
+        elif cmd == "clone" and member and len(parts) > 2:
+            text = " ".join(p for p in parts[1:] if not p.startswith("<@"))
+            where = message.author.voice or member.voice
+            if where and where.channel:
+                asyncio.create_task(self.bot.get_cog("Soundboard").clone_speak(where.channel, member.id, text))
         elif cmd == "stop":
             await self.bot.get_cog("Soundboard").stop(message.guild)
         elif cmd == "sounds":
