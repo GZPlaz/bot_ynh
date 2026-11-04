@@ -36,7 +36,7 @@ _siegebot_default_settings() {
 }
 
 _siegebot_write_env() {
-    ynh_config_add --template=".env" --destination="$install_dir/.env"
+    ynh_config_add --template="env" --destination="$install_dir/.env"
     chmod 600 "$install_dir/.env"
     chown "$app:$app" "$install_dir/.env"
 }
