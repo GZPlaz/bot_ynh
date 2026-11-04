@@ -14,6 +14,8 @@ HIDDEN_EXTRA = [
                                       "Name can be 'loud' or 'cue' for a random one."),
     (",,tts @user <text>", "Robot voice says anything in their call."),
     (",,clone @user <text>", "That person's opted-in voice clone says something in your call (or theirs if you're not in voice)."),
+    (",,spam @user [count]", "Photo spam in this channel, pinging them on the first picture (max 15)."),
+    (",,unpin", "Unpin every message pinned by the pin_shame troll."),
     (",,stop", "Stop any sound and make the bot leave voice."),
     (",,sounds", "DMs you the list of sound names."),
     (",,target @user", "Add them as a target with every troll enabled."),

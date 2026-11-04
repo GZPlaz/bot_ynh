@@ -9,14 +9,6 @@ from discord.ext import commands
 from .defaults import ATTACKERS, DEFENDERS
 from .util import fill
 
-CHALLENGES = [
-    "Pistols only. Yes, even on attack.", "No drones. Pure vibes and fear.", "Everyone must melee at least once or you're benched.",
-    "Shields only (Monty, Blitz, Fuze, Clash, Recruit). Form the turtle.", "Nobody may crouch. Ever.",
-    "You can only talk in callouts from a nature documentary.", "Last alive has to plant/defend alone, no help.",
-    "Everyone picks the operator to their left's main.", "All of you rappel the same window. Together. Holding hands.",
-    "Hip-fire only. ADS is for cowards.", "No reinforcements on defense. Walls are a social construct.",
-    "Every kill must be followed by a tea-bag or you owe the team a round.",
-]
 
 CLUTCH_EVENTS = [
     "drops in on the defuser with 0:{t} left...", "hears footsteps above...", "pre-fires a corner. Nobody there. Embarrassing.",
@@ -131,9 +123,32 @@ class Fun(commands.Cog):
         e.set_footer(text="Swap sides every 3 rounds. Complaints go to /dev/null.")
         await inter.response.send_message(embed=e)
 
-    @app_commands.command(description="Get a random challenge for the next round")
+    def next_challenge(self, guild_id):
+        """Shuffle-bag: no repeats until every challenge has come up once. Returns (text, n, total)."""
+        pool = list(dict.fromkeys(c.strip() for c in self.db.get("challenges") or [] if c.strip()))
+        if not pool:
+            return None, 0, 0
+        state = self.db.get("challenge_bag") or {}
+        g = state.get(str(guild_id), {"used": [], "last": None})
+        used = [c for c in g.get("used", []) if c in pool]
+        remaining = [c for c in pool if c not in used]
+        if not remaining:  # loop finished: start a new one, but don't open with the one that just closed it
+            used = []
+            remaining = [c for c in pool if c != g.get("last")] or pool
+        pick = random.choice(remaining)
+        used.append(pick)
+        state[str(guild_id)] = {"used": used, "last": pick}
+        self.db.set("challenge_bag", state)
+        return pick, len(used), len(pool)
+
+    @app_commands.command(description="Get a random challenge for the next round (no repeats until all are done)")
     async def challenge(self, inter: discord.Interaction):
-        await inter.response.send_message(f"🎯 **Challenge:** {random.choice(CHALLENGES)}")
+        text, n, total = self.next_challenge(inter.guild.id if inter.guild else 0)
+        if not text:
+            await inter.response.send_message("No challenges configured. The admin is lazy.", ephemeral=True)
+            return
+        note = " 🔁 *That's every challenge. New loop starts next time!*" if n == total else ""
+        await inter.response.send_message(f"🎯 **Challenge {n}/{total}:** {text}{note}")
 
     @app_commands.command(description="Rate anything out of 10")
     async def rate(self, inter: discord.Interaction, thing: str):

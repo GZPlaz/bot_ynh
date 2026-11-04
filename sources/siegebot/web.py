@@ -1,4 +1,5 @@
 """Admin panel. Sits behind YunoHost SSO (nginx); only listens on 127.0.0.1."""
+import asyncio
 import os
 import re
 import time
@@ -93,6 +94,7 @@ SECTIONS = {
         ("roasts", "lines", "/roast lines", "Use {target}."),
         ("strats", "lines", "/strat lines", ""),
         ("eight_ball", "lines", "/8ball answers", ""),
+        ("challenges", "lines", "/challenge list", "One per line. /challenge never repeats one until it has gone through all of them (per server). Edits are picked up mid-loop."),
     ]),
     "voice": ("Robot Voice & Clones", "Lines for the robot voice trolls, and the optional voice-clone service. "
               "Clones only exist for people who ran /voiceclone optin themselves; you can't upload anyone's voice from here.", [
@@ -114,6 +116,11 @@ SECTIONS = {
     "trollcfg": ("Troll Arsenal", "Who gets the secret commands, and the content the trolls use.", [
         ("troll_access", "choice", "Who can use the secret ,, commands", "Bot owners always can. 'admins' also lets every member with the Administrator permission use them. Bot owners stay immune either way, and every use by a non-owner is logged (Logs → troll).", ["admins", "owners"]),
         ("troll_role_id", "role", "Also allow this role", "Optional, e.g. a 'Troll Council' role."),
+        ("spam_count", "int", "Photo spam: pictures per burst", "1-15. Discord's own anti-spam gets twitchy above that."),
+        ("spam_interval", "float", "Photo spam: seconds between pictures", "Minimum 0.8."),
+        ("spam_delete_after", "int", "Photo spam: auto-delete after (seconds)", "0 = leave them there forever."),
+        ("spam_image_urls", "lines", "Photo spam: image/GIF links", "Optional, used alongside uploads (Photo Spam page). If there are none at all, it spams the victim's own profile picture."),
+        ("bomb_words", "lines", "Emoji bomb words", "Spelled with letter reactions. Letters can't repeat in a word (Discord rule), e.g. BOTFRAG, COPIUM."),
         ("nicknames", "lines", "Humiliating nicknames", "Max 32 characters each."),
         ("reactions", "lines", "Reaction emojis", ""),
         ("cursed_ops", "lines", "Cursed /operator picks", ""),
@@ -652,11 +659,41 @@ def create_app(db, ctl, data_dir, base_path):
                 saved = name
         go("/sounds", f"Uploaded '{saved}'." if saved else "No file received.")
 
+    import_tasks = set()
+
+    @routes.post("/sounds/import")
+    async def sounds_import(request):
+        from .sound_import import import_urls
+        f = await request.post()
+        urls = [u.strip() for u in (f.get("urls") or "").splitlines() if u.strip()][:50]
+        if not urls:
+            go("/sounds", "Paste at least one link.")
+
+        async def job():
+            db.log("sound", f"Import started: {len(urls)} link(s)")
+            try:
+                r = await import_urls(urls, data_dir)
+            except Exception as e:  # never let a bad page kill the panel
+                db.log("error", f"Sound import crashed: {e}")
+                return
+            db.log("sound", f"Import done: {len(r['added'])} added, {len(r['skipped'])} already had, {len(r['failed'])} failed")
+            if r["added"]:
+                db.log("sound", "Added: " + ", ".join(r["added"])[:900])
+            for fail in r["failed"][:20]:
+                db.log("sound", f"Import failed: {fail}")
+
+        t = asyncio.get_running_loop().create_task(job())
+        import_tasks.add(t)
+        t.add_done_callback(import_tasks.discard)
+        go("/sounds", f"Importing from {len(urls)} link(s) in the background. Refresh in a minute; details in Logs → sound.")
+
     @routes.post("/sounds/{name}/delete")
     async def sounds_delete(request):
         s = sound_lib.find_sound(data_dir, request.match_info["name"])
         if s and not s["builtin"]:
             os.remove(s["file"])
+            if s.get("pack"):
+                sound_lib.mark_removed(data_dir, s["name"])  # don't bring it back on restart
         go("/sounds", "Deleted." if s and not s["builtin"] else "Built-in sounds can't be deleted.")
 
     # ---------------- leaderboard
@@ -722,6 +759,63 @@ def create_app(db, ctl, data_dir, base_path):
             raise web.HTTPNotFound(text="The public leaderboard is turned off.")
         html = env.get_template("public_leaderboard.html").render(boards=boards(), base=base)
         return web.Response(text=html, content_type="text/html")
+
+    # ---------------- photo spam library
+    IMG_EXT = (".png", ".jpg", ".jpeg", ".gif", ".webp")
+
+    def img_dir():
+        d = os.path.join(data_dir, "images")
+        os.makedirs(d, exist_ok=True)
+        return d
+
+    @routes.get("/images")
+    async def images_get(request):
+        files = sorted(f for f in os.listdir(img_dir()) if f.lower().endswith(IMG_EXT))
+        return render("images.html", request, files=files, urls=db.get("spam_image_urls") or [],
+                      count=db.get("spam_count"), delete_after=db.get("spam_delete_after"))
+
+    @routes.get("/images/file/{name}")
+    async def images_file(request):
+        name = os.path.basename(request.match_info["name"])
+        path = os.path.join(img_dir(), name)
+        if not name.lower().endswith(IMG_EXT) or not os.path.exists(path):
+            raise web.HTTPNotFound()
+        return web.FileResponse(path)
+
+    @routes.post("/images/upload")
+    async def images_upload(request):
+        reader = await request.multipart()
+        saved = 0
+        async for part in reader:
+            if part.name != "file" or not part.filename:
+                continue
+            base, ext = os.path.splitext(part.filename)
+            if ext.lower() not in IMG_EXT:
+                go("/images", "Only png/jpg/gif/webp images.")
+            name = re.sub(r"[^a-z0-9_-]", "_", base.lower())[:40] or "image"
+            path = os.path.join(img_dir(), f"{name}{ext.lower()}")
+            n = 1
+            while os.path.exists(path):
+                path = os.path.join(img_dir(), f"{name}_{n}{ext.lower()}")
+                n += 1
+            size = 0
+            with open(path, "wb") as fh:
+                while chunk := await part.read_chunk():
+                    size += len(chunk)
+                    if size > 8 * 1024 * 1024:
+                        fh.close()
+                        os.remove(path)
+                        go("/images", "Image too big (max 8 MB).")
+                    fh.write(chunk)
+            saved += 1
+        go("/images", f"Uploaded {saved} image(s). Fresh ammunition.")
+
+    @routes.post("/images/{name}/delete")
+    async def images_delete(request):
+        path = os.path.join(img_dir(), os.path.basename(request.match_info["name"]))
+        if path.lower().endswith(IMG_EXT) and os.path.exists(path):
+            os.remove(path)
+        go("/images", "Deleted.")
 
     @routes.get("/docs")
     async def docs_get(request):

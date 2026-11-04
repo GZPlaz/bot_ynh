@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block body %}
+<h1>📸 Photo Spam</h1>
+<p class="muted">Ammunition for the <code>photo_spam</code> troll and <code>,,spam @user [count]</code>. The bot posts {{ count }} pictures in a row
+(pinging the victim on the first one) in the channel where they last talked{% if delete_after %}, then deletes them after {{ delete_after }}s{% endif %}.
+With no uploads and no links, it spams the victim's own profile picture. Burst size, speed, auto-delete and links are in
+<a href="{{ base }}/settings/trollcfg">Troll Arsenal</a>.</p>
+<form method="post" action="{{ base }}/images/upload" enctype="multipart/form-data" class="card row">
+  <input type="file" name="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple required>
+  <button>Upload</button><small style="width:100%">png / jpg / gif / webp, max 8 MB each. Select several at once.</small>
+</form>
+<div class="card">
+  <h3 style="margin-top:0">Library ({{ files|length }} uploaded{% if urls %}, {{ urls|length }} links{% endif %})</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">
+  {% for f in files %}<div style="background:#0f1115;border:1px solid var(--line);border-radius:8px;padding:8px;text-align:center">
+    <img src="{{ base }}/images/file/{{ f }}" alt="{{ f }}" loading="lazy" style="width:100%;height:110px;object-fit:cover;border-radius:6px">
+    <small style="overflow-wrap:anywhere">{{ f }}</small>
+    <form method="post" action="{{ base }}/images/{{ f }}/delete"><button class="ghost" style="margin-top:6px">Delete</button></form>
+  </div>{% else %}<p class="muted">Nothing uploaded. Victims get their own face spammed back at them.</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}

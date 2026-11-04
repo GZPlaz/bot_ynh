@@ -49,10 +49,39 @@ The installer pulls in its system packages: `python3-venv`, `ffmpeg` (playing so
 
 ## 4. Install on YunoHost
 
+### 4.0 Give your server read access to this private repository (one time)
+
+This repository is **private**, because it bundles an R6 sound pack of ripped game audio. YunoHost can't download it anonymously.
+The cleanest fix is a **deploy key**: an SSH key that can only *read* this one repository and never shows up in logs.
+
+1. On the server, create root's SSH key (skip if `/root/.ssh/id_ed25519` already exists) and trust GitHub's host key:
+   ```bash
+   sudo ssh-keygen -t ed25519 -N "" -C "yunohost-siegebot" -f /root/.ssh/id_ed25519
+   ```
+   ```bash
+   sudo sh -c 'ssh-keyscan github.com >> /root/.ssh/known_hosts'
+   ```
+2. Print the public key and copy the whole line:
+   ```bash
+   sudo cat /root/.ssh/id_ed25519.pub
+   ```
+3. On GitHub, open the repository's **Settings → Deploy keys → Add deploy key**. Paste the key, name it "YunoHost server", leave **Allow write access unticked**, and save.
+4. Test it. It should say *"Hi GZPlaz/bot_ynh! You've successfully authenticated"*:
+   ```bash
+   sudo ssh -T git@github.com
+   ```
+
+<details><summary>Alternative: a personal access token instead of a deploy key</summary>
+
+Create a fine-grained token (GitHub → Settings → Developer settings → Fine-grained tokens) with access to **only this repository** and **Contents: Read-only**,
+then use `https://x-access-token:YOUR_TOKEN@github.com/GZPlaz/bot_ynh` everywhere this guide says `git@github.com:GZPlaz/bot_ynh.git`.
+⚠️ YunoHost writes that URL, token included, into its debug logs. Never use "Share logs with YunoPaste" for install or upgrade logs if you go this way.
+</details>
+
 ### Option A: command line (SSH into your server)
 
 ```bash
-sudo yunohost app install https://github.com/GZPlaz/bot_ynh
+sudo yunohost app install git@github.com:GZPlaz/bot_ynh.git
 ```
 
 You'll be asked for:
@@ -68,7 +97,7 @@ You'll be asked for:
 
 ### Option B: web admin
 
-**Applications → Install**, scroll to the bottom to **Install a custom app**, paste `https://github.com/GZPlaz/bot_ynh` and answer the same questions.
+**Applications → Install**, scroll to the bottom to **Install a custom app**, paste `git@github.com:GZPlaz/bot_ynh.git` (after step 4.0) and answer the same questions.
 
 When it finishes, the bot comes online in Discord within a few seconds and the panel is at `https://<domain><path>`, behind the YunoHost login.
 
@@ -116,7 +145,7 @@ Check it on the panel's **🧩 Plugins** page (*Test connection*). Upgrades keep
 ### 6a (manual alternative). Without the plugin system
 
 ```bash
-git clone https://github.com/GZPlaz/bot_ynh /tmp/bot_ynh
+sudo git clone git@github.com:GZPlaz/bot_ynh.git /tmp/bot_ynh   # uses the deploy key from step 4.0
 sudo mkdir -p /opt/siegebot-clone
 sudo cp -r /tmp/bot_ynh/clone_server/* /opt/siegebot-clone/
 cd /opt/siegebot-clone
@@ -142,7 +171,7 @@ In the panel, under **Robot Voice & Clones**, set **URL** to `http://127.0.0.1:8
 ### 6b. On a PC with a GPU (Linux or Windows)
 
 ```bash
-git clone https://github.com/GZPlaz/bot_ynh
+git clone git@github.com:GZPlaz/bot_ynh.git   # private repo: add this PC's SSH key as another read-only deploy key first
 cd bot_ynh/clone_server
 python3 -m venv venv
 # Linux: venv/bin/pip …   Windows: venv\Scripts\pip …
@@ -172,7 +201,7 @@ The service speaks plain HTTP and is protected only by the token, so keep it on 
 
 ```bash
 # upgrade to the latest version on GitHub (settings and data are kept)
-sudo yunohost app upgrade siegebot -u https://github.com/GZPlaz/bot_ynh
+sudo yunohost app upgrade siegebot -u git@github.com:GZPlaz/bot_ynh.git
 
 # backup / restore (includes the database, sounds and voice samples)
 sudo yunohost backup create --apps siegebot
@@ -207,6 +236,7 @@ You also need `ffmpeg`, `libopus0` and `espeak-ng` installed for voice features.
 | Bot joins voice but is silent | Check the panel's **Logs** page. Make sure `ffmpeg` and `libopus0` are installed. |
 | Robot voice silent | `sudo apt install espeak-ng` |
 | Panel shows 502 Bad Gateway | The service is down: `sudo systemctl status siegebot` and `sudo journalctl -u siegebot -n 100`. |
+| `app_sources_fetch_failed` / `Permission denied (publickey)` | The server can't read the private repo. Redo section 4.0, and check that `sudo ssh -T git@github.com` greets you. |
 | Clone "service unreachable" | Is it running? Can the YunoHost box reach that IP and port? Does the token match? |
 
 Logs: `sudo journalctl -u siegebot -f`

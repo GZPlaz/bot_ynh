@@ -2,6 +2,7 @@
 Written once to DATA_DIR/sounds/*.wav; uploaded clips live in the same folder."""
 import math
 import os
+import shutil
 import random
 import struct
 import wave
@@ -196,6 +197,48 @@ GENERATORS = {"air_horn": _air_horn, "alarm": _alarm, "siren_sweep": _siren, "ea
 
 AUDIO_EXT = (".wav", ".mp3", ".ogg", ".opus", ".m4a", ".flac", ".webm")
 
+# R6 sound pack shipped with the bot (imported from MyInstants' "r6" search). Copied into the
+# library on startup; ones the admin deletes are remembered in .pack_removed and not restored.
+PACK_DIR = os.path.join(os.path.dirname(__file__), "sound_pack")
+REMOVED_FILE = ".pack_removed"
+
+
+def pack_names():
+    if not os.path.isdir(PACK_DIR):
+        return set()
+    return {os.path.splitext(f)[0] for f in os.listdir(PACK_DIR) if f.lower().endswith(AUDIO_EXT)}
+
+
+def _removed(d):
+    try:
+        with open(os.path.join(d, REMOVED_FILE)) as fh:
+            return {line.strip() for line in fh if line.strip()}
+    except OSError:
+        return set()
+
+
+def mark_removed(data_dir, name):
+    d = sound_dir(data_dir)
+    if name in pack_names() and name not in _removed(d):
+        with open(os.path.join(d, REMOVED_FILE), "a") as fh:
+            fh.write(name + "\n")
+
+
+def install_pack(data_dir):
+    d = sound_dir(data_dir)
+    if not os.path.isdir(PACK_DIR):
+        return 0
+    removed, added = _removed(d), 0
+    for fn in sorted(os.listdir(PACK_DIR)):
+        name, ext = os.path.splitext(fn)
+        if ext.lower() not in AUDIO_EXT or name in removed or name in BUILTIN:
+            continue
+        if any(os.path.exists(os.path.join(d, name + e)) for e in AUDIO_EXT):
+            continue
+        shutil.copyfile(os.path.join(PACK_DIR, fn), os.path.join(d, fn))
+        added += 1
+    return added
+
 
 def sound_dir(data_dir):
     d = os.path.join(data_dir, "sounds")
@@ -209,16 +252,19 @@ def ensure_builtin(data_dir):
         p = os.path.join(d, name + ".wav")
         if not os.path.exists(p):
             _write(p, gen())
+    install_pack(data_dir)
 
 
 def list_sounds(data_dir):
     d = sound_dir(data_dir)
     out = []
+    pack = pack_names()
     for fn in sorted(os.listdir(d)):
         name, ext = os.path.splitext(fn)
         if ext.lower() in AUDIO_EXT:
-            out.append({"name": name, "file": os.path.join(d, fn), "builtin": name in BUILTIN,
-                        "description": BUILTIN.get(name, "Uploaded clip"), "size": os.path.getsize(os.path.join(d, fn))})
+            out.append({"name": name, "file": os.path.join(d, fn), "builtin": name in BUILTIN, "pack": name in pack,
+                        "description": BUILTIN.get(name) or ("R6 sound pack" if name in pack else "Uploaded / imported clip"),
+                        "size": os.path.getsize(os.path.join(d, fn))})
     return out
 
 

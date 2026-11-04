@@ -17,12 +17,12 @@ troll engine for griefing your friends. It comes with a web admin panel on your 
 
 ## 2. Install on YunoHost
 ```bash
-sudo yunohost app install https://github.com/GZPlaz/bot_ynh
+sudo yunohost app install git@github.com:GZPlaz/bot_ynh.git   # private repo: add a deploy key first (INSTALL.md §4.0)
 ```
 It asks for a domain/path, the bot token and your user ID. The panel is limited to the `admins` group through YunoHost SSO.
 You can change who has access under *Users → Permissions*.
 
-Upgrade after pulling changes: `sudo yunohost app upgrade siegebot -u https://github.com/GZPlaz/bot_ynh`
+Upgrade after pulling changes: `sudo yunohost app upgrade siegebot -u git@github.com:GZPlaz/bot_ynh.git`
 Logs: `sudo journalctl -u siegebot -f`
 
 ## Features
@@ -50,7 +50,7 @@ a `duration` like `7d`) `/unban /softban /slowmode /lock /unlock /lockdown /quar
 The panel also has a case browser, quarantine and temp-ban lists, and raid/lockdown buttons.
 
 **Fun**: `/operator`, `/strat`, `/clutch` (1v5 simulation, rigged in your favour), `/teams` (splits your voice channel into teams with operators),
-`/challenge` (random round restriction), `/stats` (made up, and it's always on your side), `/roast` (owners get uno-reversed), `/8ball`, `/rate`, `!help`,
+`/challenge` (160+ round challenges that never repeat until you've done them all; editable), `/stats` (made up, and it's always on your side), `/roast` (owners get uno-reversed), `/8ball`, `/rate`, `!help`,
 plus custom `!commands` and keyword auto-responders that you manage from the panel.
 
 **🏅 Leaderboard**: players are rated Tier 1 (best) to Tier 5 (worst). Anyone can `/tier suggest` a change *with a reason*;
@@ -67,7 +67,8 @@ reactions 🤡, sPoNgEbOb mocking, phantom "typing...", fake autocorrect, humili
 shuffles, 5-second server mutes, 🔊 **voice ambushes** (the bot joins their call and plays a fake footstep, drone, defuser or breach cue,
 or the loudest noise in the arsenal), rigged `/stats`, cursed `/operator` picks, and fake "official" report DMs, nickname lock (rename yourself back → new humiliating name), 30–90s micro-timeouts
 with absurd reasons, voice disconnects, a hoisted hot-pink role of shame, a typing sniper ("nobody asked" before they hit enter),
-parrot mode, ghost-ping sprees across 5 channels, and voice chaos: 6-second deafens, a "dying mic" mute stutter, a 20-second solo voice
+parrot mode, ghost-ping sprees across 5 channels, 📸 **photo spam** (your uploaded pictures, or their own profile picture), 🧨 emoji bombs spelling B-O-T-F-R-A-G,
+📦 message teleporting, 📌 pins of shame, and voice chaos: 6-second deafens, a "dying mic" mute stutter, a 20-second solo voice
 jail, a robot voice yelling fake callouts in their call, and potato mode (their channel drops to 8 kbps for 2 minutes).
 Robot-voice chaos: every victim gets their own personal robot voice, which **reads their text messages aloud** while they're in voice.
 A **join announcer** greets them ("Please lower your expectations"), a **sports commentator** narrates the moment they type "dead",
@@ -76,10 +77,12 @@ A **join announcer** greets them ("Please lower your expectations"), a **sports 
 them instantly (`,,help` DMs you the list).
 The 🚨 **Panic button** turns everything off and restores everyone's nicknames.
 
-**Soundboard** (panel → *Soundboard*): 12 built-in synthesized sounds. There are pure noise ones (air horn, alarm, siren, distorted square wave,
+**Soundboard** (panel → *Soundboard*): ships with an **R6 sound pack** of 59 clips from MyInstants' "r6" search
+(nitro cell, Lion scan, defuser alarm, Fuze cluster charge…), plus 12 built-in synthesized sounds.
+⚠️ The pack is mostly ripped game audio, so **keep this repository private**. There are pure noise ones (air horn, alarm, siren, distorted square wave,
 sad trombone) and fake cues (footsteps, drone, defuser, breach, gunfire, reinforcement, glass). They're all original, not game audio.
 You can upload your own clips, play them in any call or follow a specific person into theirs, set the volume up to 1000% (it clips and distorts
-past 100%), make the robot voice (espeak-ng) say anything in someone's call, or use `,,tts @user <text>`, `,,blast @user`, `,,ambush @user` and `,,sound @user air_horn 3` in chat.
+past 100%), import sounds by pasting links (e.g. a MyInstants search page grabs every sound on it, downloaded to your server only), make the robot voice (espeak-ng) say anything in someone's call, or use `,,tts @user <text>`, `,,blast @user`, `,,ambush @user` and `,,sound @user air_horn 3` in chat.
 
 ## 🧬 Opt-in voice clones
 Friends who *want* to be cloned run `/voiceclone optin`, choose who may use their voice (bot owners only, or everyone), and upload
