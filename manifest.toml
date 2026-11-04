@@ -57,4 +57,4 @@ ram.runtime = "100M"
     [resources.ports]
 
     [resources.apt]
-    packages = "python3-venv, python3-pip, ffmpeg, libopus0"
+    packages = "python3-venv, python3-pip, ffmpeg, libopus0, espeak-ng"

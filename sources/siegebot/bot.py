@@ -24,6 +24,7 @@ class SiegeBot(commands.Bot):
         self.data_dir = data_dir
         self.stealth = {}  # user_id -> ts until which their changes stay out of the event log
         self.suppress_delete_log = set()  # message ids deleted by the bot itself
+        self.suppress_channel_log = set()  # temp channels made by trolls
 
     def is_boss(self, user):
         return user.id in self.owner_id_set

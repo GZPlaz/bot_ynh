@@ -3,6 +3,8 @@ import asyncio
 import logging
 import os
 import random
+import shutil
+import uuid
 
 import discord
 from discord.ext import commands
@@ -83,6 +85,33 @@ class Soundboard(commands.Cog):
         if not sound:
             return "no sounds available"
         return await self.play(member.voice.channel, sound, times)
+
+    async def tts(self, text):
+        """Render text to a wav with espeak-ng. Returns a sound dict or None."""
+        exe = shutil.which("espeak-ng") or shutil.which("espeak")
+        if not exe:
+            return None
+        d = os.path.join(self.data_dir, "tts")
+        os.makedirs(d, exist_ok=True)
+        path = os.path.join(d, f"{uuid.uuid4().hex}.wav")
+        voice = random.choice(["en-us", "en-us+m3", "en-us+m7", "en-gb+m2", "en-us+f3"])
+        proc = await asyncio.create_subprocess_exec(
+            exe, "-v", voice, "-s", str(random.randint(165, 200)), "-p", str(random.randint(35, 60)), "-a", "200",
+            "-w", path, "--", text[:300], stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+        await proc.wait()
+        return {"name": "tts", "file": path} if os.path.exists(path) else None
+
+    async def speak(self, channel, text, times=1):
+        sound = await self.tts(text)
+        if not sound:
+            return "text-to-speech unavailable (install espeak-ng)"
+        try:
+            return (await self.play(channel, sound, times)).replace("played tts", f"said '{text[:60]}'")
+        finally:
+            try:
+                os.remove(sound["file"])
+            except OSError:
+                pass
 
     async def stop(self, guild):
         self.cancel.add(guild.id)

@@ -16,6 +16,17 @@
   </div>
   <small>Targeting a member follows them into whatever channel they're in.</small>
 </form>
+<form method="post" action="{{ base }}/sounds/speak" class="card">
+  <h3 style="margin-top:0">🗣️ Robot voice</h3>
+  <div class="row">
+    <input type="text" name="text" maxlength="300" placeholder="TWO IN BASEMENT. DAVE IS ONE SHOT. I REPEAT, DAVE IS ONE SHOT." style="flex:1">
+    <select name="target" style="width:auto">
+      {% for id, name in members %}<option value="m:{{ id }}">🎯 {{ name }}</option>{% endfor %}
+      {% for id, name in vchans %}<option value="c:{{ id }}">{{ name }}</option>{% endfor %}
+    </select>
+    <button>Say it</button>
+  </div>
+</form>
 <div class="row">
 <form method="post" action="{{ base }}/sounds/stop"><button class="bad">⏹ Stop &amp; leave voice</button></form>
 </div>

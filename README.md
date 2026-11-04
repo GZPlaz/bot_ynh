@@ -47,7 +47,8 @@ and a 👻 ghost-ping detector. The troll engine's own actions are kept out of t
 a `duration` like `7d`) `/unban /softban /slowmode /lock /unlock /lockdown /quarantine /unquarantine /raidmode /nick /userinfo`.
 The panel also has a case browser, quarantine and temp-ban lists, and raid/lockdown buttons.
 
-**Fun**: `/operator`, `/strat`, `/stats` (made up, and it's always on your side), `/roast` (owners get uno-reversed), `/8ball`, `/rate`, `!help`,
+**Fun**: `/operator`, `/strat`, `/clutch` (1v5 simulation, rigged in your favour), `/teams` (splits your voice channel into teams with operators),
+`/challenge` (random round restriction), `/stats` (made up, and it's always on your side), `/roast` (owners get uno-reversed), `/8ball`, `/rate`, `!help`,
 plus custom `!commands` and keyword auto-responders that you manage from the panel.
 
 **Personality**: ping it, reply to it, or say "good bot"/"bad bot" and it answers back with sass. Every line can be edited in the panel.
@@ -57,7 +58,8 @@ reactions 🤡, sPoNgEbOb mocking, phantom "typing...", fake autocorrect, humili
 shuffles, 5-second server mutes, 🔊 **voice ambushes** (the bot joins their call and plays a fake footstep, drone, defuser or breach cue,
 or the loudest noise in the arsenal), rigged `/stats`, cursed `/operator` picks, and fake "official" report DMs, nickname lock (rename yourself back → new humiliating name), 30–90s micro-timeouts
 with absurd reasons, voice disconnects, a hoisted hot-pink role of shame, a typing sniper ("nobody asked" before they hit enter),
-parrot mode, and ghost-ping sprees across 5 channels. Trolls fire at random based on
+parrot mode, ghost-ping sprees across 5 channels, and voice chaos: 6-second deafens, a "dying mic" mute stutter, a 20-second solo voice
+jail, a robot voice yelling fake callouts in their call, and potato mode (their channel drops to 8 kbps for 2 minutes). Trolls fire at random based on
 *chance × chaos*, from a timed loop, or on demand from the panel. As an owner you can also type secret `,,` commands in chat; the bot deletes
 them instantly (`,,help` DMs you the list).
 The 🚨 **Panic button** turns everything off and restores everyone's nicknames.
@@ -65,7 +67,7 @@ The 🚨 **Panic button** turns everything off and restores everyone's nicknames
 **Soundboard** (panel → *Soundboard*): 12 built-in synthesized sounds. There are pure noise ones (air horn, alarm, siren, distorted square wave,
 sad trombone) and fake cues (footsteps, drone, defuser, breach, gunfire, reinforcement, glass). They're all original, not game audio.
 You can upload your own clips, play them in any call or follow a specific person into theirs, set the volume up to 1000% (it clips and distorts
-past 100%), or use `,,blast @user`, `,,ambush @user` and `,,sound @user air_horn 3` in chat.
+past 100%), make the robot voice (espeak-ng) say anything in someone's call, or use `,,tts @user <text>`, `,,blast @user`, `,,ambush @user` and `,,sound @user air_horn 3` in chat.
 
 ## Layout
 `manifest.toml`, `scripts/`, `conf/` are the YunoHost package. `sources/siegebot/` holds the bot and panel (discord.py + aiohttp + SQLite in `/home/yunohost.app/siegebot`).

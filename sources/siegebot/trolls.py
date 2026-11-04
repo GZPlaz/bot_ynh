@@ -16,8 +16,10 @@ log = logging.getLogger("siegebot.trolls")
 
 PASSIVE = ["react", "mock", "typing", "correct", "parrot"]
 ACTIVE = ["nickname", "ghost_ping", "fake_ban", "voice_shuffle", "voice_mute", "dm_report", "sound_ambush", "noise_blast",
-          "micro_timeout", "voice_kick", "role_of_shame", "ping_spree", "parrot"]
-VOICE_ACTIONS = ("voice_shuffle", "voice_mute", "sound_ambush", "noise_blast", "voice_kick")
+          "micro_timeout", "voice_kick", "role_of_shame", "ping_spree", "parrot",
+          "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode"]
+VOICE_ACTIONS = ("voice_shuffle", "voice_mute", "sound_ambush", "noise_blast", "voice_kick",
+                 "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode")
 RARE = ("fake_ban", "dm_report", "micro_timeout", "voice_kick", "role_of_shame")
 ACTIONS = {
     "nickname": "Rename", "restore_nick": "Restore nickname", "ghost_ping": "Ghost ping",
@@ -26,11 +28,15 @@ ACTIONS = {
     "sound_ambush": "Fake cue in their call", "noise_blast": "Noise blast in their call",
     "micro_timeout": "Micro timeout (30-90s)", "voice_kick": "Kick from voice", "role_of_shame": "Role of shame",
     "remove_shame": "Remove role of shame", "ping_spree": "Ghost-ping spree", "parrot": "Parrot mode (3 min)",
+    "voice_deafen": "Deafen 6s", "voice_stutter": "Mic stutter", "voice_jail": "Voice jail 20s",
+    "fake_callout": "Robot fake callout", "potato_mode": "Potato mode (8 kbps, 2 min)",
 }
 HIDDEN = {"nick": "nickname", "unnick": "restore_nick", "ghost": "ghost_ping", "fakeban": "fake_ban",
           "shuffle": "voice_shuffle", "mute": "voice_mute", "report": "dm_report", "mock": "mock_next",
           "ambush": "sound_ambush", "blast": "noise_blast", "tout": "micro_timeout", "vkick": "voice_kick",
-          "shame": "role_of_shame", "unshame": "remove_shame", "spree": "ping_spree", "parrot": "parrot"}
+          "shame": "role_of_shame", "unshame": "remove_shame", "spree": "ping_spree", "parrot": "parrot",
+          "deafen": "voice_deafen", "stutter": "voice_stutter", "jail": "voice_jail", "callout": "fake_callout",
+          "potato": "potato_mode"}
 
 
 class Trolls(commands.Cog):
@@ -41,6 +47,7 @@ class Trolls(commands.Cog):
         self.loop_task = None
         self.parrots = {}  # user_id -> ts until
         self.sniped = {}  # user_id -> last snipe ts
+        self.potato = {}  # voice channel id -> original bitrate
         self.renaming = set()  # ids the bot is renaming right now (so nick_lock ignores our own edits)
 
     async def cog_load(self):
@@ -271,6 +278,81 @@ class Trolls(commands.Cog):
         except discord.HTTPException:
             pass
 
+    # ------------------------------------------------------------------ voice chat trolls
+    async def do_voice_deafen(self, member, channel=None):
+        if not member.voice:
+            return "not in voice"
+        await member.edit(deafen=True)
+        try:
+            await asyncio.sleep(6)
+        finally:
+            if member.voice:
+                await member.edit(deafen=False)
+        return "deafened for 6s"
+
+    async def do_voice_stutter(self, member, channel=None):
+        if not member.voice:
+            return "not in voice"
+        try:
+            for _ in range(random.randint(6, 10)):
+                await member.edit(mute=True)
+                await asyncio.sleep(random.uniform(0.4, 0.9))
+                if not member.voice:
+                    break
+                await member.edit(mute=False)
+                await asyncio.sleep(random.uniform(0.3, 0.8))
+        finally:
+            if member.voice:
+                await member.edit(mute=False)  # never leave them muted
+        return "mic stuttered"
+
+    async def do_voice_jail(self, member, channel=None):
+        if not member.voice or not member.voice.channel:
+            return "not in voice"
+        home, guild = member.voice.channel, member.guild
+        overwrites = {guild.default_role: discord.PermissionOverwrite(connect=False, view_channel=False),
+                      guild.me: discord.PermissionOverwrite(connect=True, view_channel=True, move_members=True),
+                      member: discord.PermissionOverwrite(view_channel=True, speak=True)}
+        jail = await guild.create_voice_channel(random.choice(self.db.get("jail_names"))[:100], category=home.category,
+                                                overwrites=overwrites, user_limit=1, reason="Routine maintenance")
+        self.bot.suppress_channel_log.add(jail.id)
+        try:
+            await member.move_to(jail)
+            await asyncio.sleep(20)
+            if member.voice and member.voice.channel == jail:
+                await member.move_to(home)
+        finally:
+            await jail.delete(reason="Routine maintenance complete")
+        return "served 20s in voice jail"
+
+    async def do_fake_callout(self, member, channel=None):
+        if not member.voice or not member.voice.channel:
+            return "not in voice"
+        board = self.bot.get_cog("Soundboard")
+        lines = random.sample(self.db.get("fake_callouts"), k=min(2, len(self.db.get("fake_callouts"))))
+        return await board.speak(member.voice.channel, " ... ".join(lines))
+
+    async def do_potato_mode(self, member, channel=None):
+        if not member.voice or not member.voice.channel:
+            return "not in voice"
+        ch = member.voice.channel
+        if ch.id in self.potato:
+            return "already a potato"
+        self.potato[ch.id] = ch.bitrate
+        await ch.edit(bitrate=8000)
+        asyncio.get_running_loop().call_later(120, lambda: asyncio.ensure_future(self.unpotato(ch.id)))
+        return f"{ch.name} is now 8 kbps for 2 min"
+
+    async def unpotato(self, channel_id=None):
+        for cid in [channel_id] if channel_id else list(self.potato):
+            ch = self.bot.get_channel(cid)
+            rate = self.potato.pop(cid, None)
+            if ch and rate:
+                try:
+                    await ch.edit(bitrate=rate)
+                except discord.HTTPException:
+                    pass
+
     async def do_mock_next(self, member, channel=None):
         self.mock_next.add(member.id)
         return "next message will be mocked"
@@ -286,6 +368,7 @@ class Trolls(commands.Cog):
                     restored += 1
         self.parrots.clear()
         self.mock_next.clear()
+        await self.unpotato()
         await self.expire_shame(everything=True)
         for gid, rid in (self.db.get("shame_roles") or {}).items():
             guild = self.bot.get_guild(int(gid))
@@ -380,6 +463,8 @@ class Trolls(commands.Cog):
         """,,nick @user  ,,ghost @user  ,,fakeban @user  ,,shuffle @user  ,,mute @user  ,,report @user
         ,,mock @user  ,,unnick @user  ,,ambush @user  ,,blast @user  ,,tout @user  ,,vkick @user
         ,,shame @user  ,,unshame @user  ,,spree @user  ,,parrot @user
+        ,,deafen @user  ,,stutter @user  ,,jail @user  ,,callout @user  ,,potato @user
+        ,,tts @user <text>   (robot voice says anything in their call)
         ,,sound @user <name> [times]   (or ,,sound <name> to play in YOUR channel)  ,,stop  ,,sounds
         ,,target @user  ,,untarget @user  ,,chaos 2  ,,on  ,,off  ,,panic"""
         try:
@@ -402,6 +487,11 @@ class Trolls(commands.Cog):
             if who.voice and who.voice.channel and board.pick(name):
                 self.bot.stealth[who.id] = time.time() + 30
                 asyncio.create_task(board.play(who.voice.channel, board.pick(name), times))
+        elif cmd == "tts" and member and len(parts) > 2:
+            text = " ".join(p for p in parts[1:] if not p.startswith("<@"))
+            if member.voice and member.voice.channel:
+                self.bot.stealth[member.id] = time.time() + 30
+                asyncio.create_task(self.bot.get_cog("Soundboard").speak(member.voice.channel, text))
         elif cmd == "stop":
             await self.bot.get_cog("Soundboard").stop(message.guild)
         elif cmd == "sounds":

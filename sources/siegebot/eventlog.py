@@ -104,7 +104,8 @@ class EventLog(commands.Cog):
     # ---------------- voice
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
-        if member.bot or self.stealthy(member.id) or before.channel == after.channel:
+        if member.bot or self.stealthy(member.id) or before.channel == after.channel or \
+                any(c and c.id in self.bot.suppress_channel_log for c in (before.channel, after.channel)):
             return
         if not before.channel:
             text = f"🔊 joined **{after.channel}**"
@@ -117,10 +118,14 @@ class EventLog(commands.Cog):
     # ---------------- server
     @commands.Cog.listener()
     async def on_guild_channel_create(self, ch):
+        if ch.id in self.bot.suppress_channel_log or ch.name in (self.db.get("jail_names") or []):
+            return
         await self.emit(ch.guild, "server", "➕ Channel created", f"{ch.mention} ({ch.type})", 0x30A46C)
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, ch):
+        if ch.id in self.bot.suppress_channel_log or ch.name in (self.db.get("jail_names") or []):
+            return
         await self.emit(ch.guild, "server", "➖ Channel deleted", f"#{ch.name} ({ch.type})", 0xE5484D)
 
     @commands.Cog.listener()

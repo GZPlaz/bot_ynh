@@ -11,7 +11,8 @@ DEFENDERS = ["Smoke", "Mute", "Castle", "Pulse", "Doc", "Rook", "Kapkan", "Tacha
 
 TROLL_TYPES = ["react", "mock", "typing", "correct", "nickname", "ghost_ping", "fake_ban", "voice_shuffle",
                "voice_mute", "fake_stats", "cursed_ops", "dm_report", "sound_ambush", "noise_blast",
-               "nick_lock", "micro_timeout", "voice_kick", "role_of_shame", "typing_sniper", "parrot", "ping_spree"]
+               "nick_lock", "micro_timeout", "voice_kick", "role_of_shame", "typing_sniper", "parrot", "ping_spree",
+               "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode"]
 
 TROLL_DESCRIPTIONS = {
     "react": "Randomly reacts to their messages with clowns, salt and skulls",
@@ -35,6 +36,11 @@ TROLL_DESCRIPTIONS = {
     "typing_sniper": "The moment they start typing, the bot replies 'nobody asked' before they can send",
     "parrot": "For 3 minutes the bot repeats every single thing they say",
     "ping_spree": "Ghost-pings them in up to 5 channels in a row. Unread badges everywhere.",
+    "voice_deafen": "Server-deafens them for 6 seconds. They miss every callout.",
+    "voice_stutter": "Mutes/unmutes them rapidly for ~8 seconds so their mic sounds like it's dying",
+    "voice_jail": "Drags them alone into a locked '🔒 Timeout Corner' channel for 20 seconds, then back",
+    "fake_callout": "Bot joins their call and a robot voice yells fake callouts ('TWO IN BASEMENT!')",
+    "potato_mode": "Drops their voice channel to 8 kbps for 2 minutes. Everyone sounds like a potato.",
 }
 
 SASS_LINES = [
@@ -134,6 +140,15 @@ TIMEOUT_REASONS = [
     "Reinforced the wrong wall (again)", "Team-flashed the entire squad", "Said 'he's one shot' about a full-HP enemy",
     "Bottom fragged with Recruit", "Being Copper in spirit",
 ]
+
+FAKE_CALLOUTS = [
+    "Two in basement! Two in basement!", "He's one shot! He's one shot! Push now!", "Behind you! Behind you!",
+    "Defuser is planted! Go go go!", "Roamer in garage, rotate!", "They're flanking left, watch left!",
+    "Breach on main wall, get off the wall!", "Nitro cell! Move!", "I'm dead, it was Dave's fault.",
+    "Enemy drone in your room. Shoot it. Shoot it now.", "He's tea bagging me. Avenge me.",
+]
+
+JAIL_NAMES = ["🔒 Timeout Corner", "🔒 Think About Your Rotates", "🔒 Copper Containment Unit", "🔒 Spawn Peek Jail"]
 
 SHAME_ROLE_NAMES = [
     "🤡 Certified Bottom Frag", "🧂 Professional Coper", "📉 Negative K/D Club", "🐌 Slowest Rotate Alive",
@@ -242,6 +257,8 @@ DEFAULTS = {
     "timeout_reasons": TIMEOUT_REASONS,
     "shame_role_names": SHAME_ROLE_NAMES,
     "shame_minutes": 30,
+    "fake_callouts": FAKE_CALLOUTS,
+    "jail_names": JAIL_NAMES,
     "shame_roles": {},     # guild_id -> role_id
     "shame_expiry": {},    # "guild:user" -> ts
 }

@@ -9,6 +9,22 @@ from discord.ext import commands
 from .defaults import ATTACKERS, DEFENDERS
 from .util import fill
 
+CHALLENGES = [
+    "Pistols only. Yes, even on attack.", "No drones. Pure vibes and fear.", "Everyone must melee at least once or you're benched.",
+    "Shields only (Monty, Blitz, Fuze, Clash, Recruit). Form the turtle.", "Nobody may crouch. Ever.",
+    "You can only talk in callouts from a nature documentary.", "Last alive has to plant/defend alone, no help.",
+    "Everyone picks the operator to their left's main.", "All of you rappel the same window. Together. Holding hands.",
+    "Hip-fire only. ADS is for cowards.", "No reinforcements on defense. Walls are a social construct.",
+    "Every kill must be followed by a tea-bag or you owe the team a round.",
+]
+
+CLUTCH_EVENTS = [
+    "drops in on the defuser with 0:{t} left...", "hears footsteps above...", "pre-fires a corner. Nobody there. Embarrassing.",
+    "throws a nade. It bounces back.", "gets a clean headshot! 1 down.", "swings wide like a maniac...",
+    "trips on barbed wire.", "hides behind a shield guy's shield (it's an enemy's).", "hears a drone. Shoots it. Feels powerful.",
+    "gets a sick double through a soft wall!", "peeks the same angle for the third time.", "runs past the bomb site entirely.",
+]
+
 RANKS = ["Copper V", "Bronze III", "Silver II", "Gold I", "Platinum", "Emerald", "Diamond", "Champion"]
 
 
@@ -69,6 +85,46 @@ class Fun(commands.Cog):
     @app_commands.command(name="8ball", description="Ask the magic 8-ball")
     async def eightball(self, inter: discord.Interaction, question: str):
         await inter.response.send_message(f"🎱 *{discord.utils.escape_markdown(question)}*\n**{random.choice(self.db.get('eight_ball'))}**")
+
+    @app_commands.command(description="Simulate a 1v5 clutch. Results may be rigged.")
+    async def clutch(self, inter: discord.Interaction, member: discord.Member = None):
+        member = member or inter.user
+        events = random.sample(CLUTCH_EVENTS, k=4)
+        if self.bot.is_boss(member):
+            won = True
+        elif self.trolled(member, "fake_stats"):
+            won = False
+        else:
+            won = random.random() < 0.35
+        lines = [f"**{member.display_name}** is alone vs 5. Round on the line."]
+        for i, ev in enumerate(events):
+            lines.append(f"`{['0:45', '0:30', '0:15', '0:05'][i]}` {member.display_name} {ev.replace('{t}', str(random.randint(5, 30)))}")
+        lines.append(f"\n🏆 **ACE. CLUTCH. LEGEND.** {member.mention} wins the round!" if won else
+                     f"\n💀 {member.mention} died. The enemy didn't even need to aim. GG go next.")
+        await inter.response.send_message("\n".join(lines))
+
+    @app_commands.command(description="Split the people in your voice channel into two random teams with operators")
+    async def teams(self, inter: discord.Interaction):
+        if not inter.user.voice or not inter.user.voice.channel:
+            await inter.response.send_message("Join a voice channel first. I can't split invisible people.", ephemeral=True)
+            return
+        players = [m for m in inter.user.voice.channel.members if not m.bot]
+        if len(players) < 2:
+            await inter.response.send_message("You need friends for this. At least one. 😬", ephemeral=True)
+            return
+        random.shuffle(players)
+        half = (len(players) + 1) // 2
+        a, b = players[:half], players[half:]
+        atk, dfn = random.sample(ATTACKERS, k=len(a)), random.sample(DEFENDERS, k=len(b))
+        e = discord.Embed(title="⚔️ Teams", color=0xF5A623)
+        e.add_field(name="🔵 Attack", value="\n".join(f"{m.display_name}: **{o}**" for m, o in zip(a, atk)))
+        e.add_field(name="🟠 Defense", value="\n".join(f"{m.display_name}: **{o}**" for m, o in zip(b, dfn)) or "nobody")
+        e.set_footer(text="Swap sides every 3 rounds. Complaints go to /dev/null.")
+        await inter.response.send_message(embed=e)
+
+    @app_commands.command(description="Get a random challenge for the next round")
+    async def challenge(self, inter: discord.Interaction):
+        await inter.response.send_message(f"🎯 **Challenge:** {random.choice(CHALLENGES)}")
 
     @app_commands.command(description="Rate anything out of 10")
     async def rate(self, inter: discord.Interaction, thing: str):

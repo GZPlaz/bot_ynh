@@ -106,6 +106,8 @@ SECTIONS = {
         ("timeout_reasons", "lines", "Micro-timeout reasons", ""),
         ("shame_role_names", "lines", "Role-of-shame names", "Max 100 characters."),
         ("shame_minutes", "int", "Role of shame lasts (minutes)", ""),
+        ("fake_callouts", "lines", "Fake voice callouts (spoken by robot voice)", ""),
+        ("jail_names", "lines", "Voice jail channel names", ""),
     ]),
 }
 SECTIONS = {k: (t, i, [dict(zip(("key", "typ", "label", "help", "choices"), f + (None,) * (5 - len(f)))) for f in fs])
@@ -346,7 +348,8 @@ def create_app(db, ctl, data_dir, base_path):
         if action not in ACTIONS:
             go("/trolls", "Unknown action.")
         ch = b.get_channel(int(f["channel"])) if f.get("channel", "").isdigit() else None
-        if action in ("fake_ban", "voice_shuffle", "voice_mute", "ping_spree", "sound_ambush", "noise_blast"):
+        if action in ("fake_ban", "voice_shuffle", "voice_mute", "ping_spree", "sound_ambush", "noise_blast",
+                      "voice_deafen", "voice_stutter", "voice_jail", "fake_callout", "potato_mode"):
             b.loop.create_task(cog.run_action(action, m, ch))  # these take a while, run in background
             go("/trolls", f"{ACTIONS[action]} launched at {m.display_name}. 🚀")
         result = await cog.run_action(action, m, ch)
@@ -474,6 +477,26 @@ def create_app(db, ctl, data_dir, base_path):
             go("/sounds", "Pick a sound and a voice channel/member that's in voice.")
         b.loop.create_task(board.play(channel, sound, times))
         go("/sounds", f"🔊 Playing {sound['name']} ×{times} in {channel.name}.")
+
+    @routes.post("/sounds/speak")
+    async def sounds_speak(request):
+        f = await request.post()
+        b = bot()
+        text = (f.get("text") or "").strip()
+        target = f.get("target", "")
+        channel = None
+        if b and target.startswith("m:"):
+            for g in b.guilds:
+                m = g.get_member(int(target[2:]))
+                if m and m.voice:
+                    channel = m.voice.channel
+                    b.stealth[m.id] = time.time() + 30
+        elif b and target.startswith("c:"):
+            channel = b.get_channel(int(target[2:]))
+        if not channel or not text:
+            go("/sounds", "Type something and pick a voice channel/member that's in voice.")
+        b.loop.create_task(b.get_cog("Soundboard").speak(channel, text[:300]))
+        go("/sounds", f"🗣️ Saying it in {channel.name}.")
 
     @routes.post("/sounds/stop")
     async def sounds_stop(request):

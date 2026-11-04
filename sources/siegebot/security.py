@@ -282,6 +282,8 @@ class Security(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
+        if channel.id in self.bot.suppress_channel_log:
+            return
         rid = str(self.g("quarantine_role_id"))
         role = channel.guild.get_role(int(rid)) if rid.isdigit() else None
         if role:
