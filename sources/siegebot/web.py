@@ -472,7 +472,8 @@ def create_app(db, ctl, data_dir, base_path):
         pending = db.q("SELECT * FROM pending_clones ORDER BY ts DESC")
         all_members = sorted({(str(m.id), f"{m.display_name} ({m})") for g in (b.guilds if b else []) for m in g.members
                               if not m.bot}, key=lambda x: x[1].lower())
-        return render("sounds.html", request, sounds=sound_lib.list_sounds(data_dir), vchans=vchans, members=members,
+        diag = b.get_cog("Soundboard").diagnostics if b else {}
+        return render("sounds.html", request, sounds=sound_lib.list_sounds(data_dir), vchans=vchans, members=members, diag=diag,
                       clones=clones, clone_url=clone_endpoint()[0], pending=pending, all_members=all_members,
                       volume=db.get("sound_volume"), max_seconds=db.get("sound_max_seconds"))
 

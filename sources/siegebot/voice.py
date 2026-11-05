@@ -16,6 +16,28 @@ from . import sounds
 log = logging.getLogger("siegebot.voice")
 
 
+def voice_diagnostics():
+    """What voice playback needs on this machine. Returns {name: (ok, detail)}."""
+    out = {}
+    ff = shutil.which("ffmpeg")
+    out["ffmpeg"] = (bool(ff), ff or "not installed (sudo apt install ffmpeg)")
+    if not discord.opus.is_loaded():
+        for name in ("opus", "libopus.so.0", "libopus.so"):
+            try:
+                discord.opus.load_opus(name) if name != "opus" else discord.opus._load_default()
+            except Exception:
+                pass
+            if discord.opus.is_loaded():
+                break
+    out["opus"] = (discord.opus.is_loaded(), "loaded" if discord.opus.is_loaded() else "libopus not found (sudo apt install libopus0)")
+    try:
+        import davey  # noqa: F401  (Discord's end-to-end voice encryption)
+        out["e2ee"] = (True, f"davey {getattr(davey, '__version__', '')}".strip())
+    except ImportError:
+        out["e2ee"] = (False, "davey missing: reinstall with pip install 'discord.py[voice]'")
+    return out
+
+
 class Soundboard(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -23,6 +45,32 @@ class Soundboard(commands.Cog):
         self.data_dir = bot.data_dir
         self.locks = {}
         self.cancel = set()
+        self.diagnostics = voice_diagnostics()
+        for name, (ok, detail) in self.diagnostics.items():
+            (log.info if ok else log.error)("voice check %s: %s", name, detail)
+            if not ok:
+                self.db.log("error", f"Voice check failed: {name}: {detail}")
+
+    async def wait_until_audible(self, vc, timeout=8.0):
+        """Discord voice is end-to-end encrypted (DAVE). Until the key exchange finishes, discord.py sends
+        audio unencrypted, which listeners' clients drop, so playing right after joining is silent.
+        Wait for the session to be able to encrypt (or for a non-E2EE channel to settle)."""
+        loop = asyncio.get_running_loop()
+        start = loop.time()
+        conn = getattr(vc, "_connection", None)
+        while loop.time() - start < timeout and vc.is_connected():
+            version = getattr(conn, "dave_protocol_version", 0)
+            if version and getattr(conn, "can_encrypt", False):
+                break
+            if not version and loop.time() - start > 1.5:  # gateway says no E2EE for this call
+                break
+            await asyncio.sleep(0.1)
+        else:
+            if vc.is_connected():
+                log.warning("Voice encryption not ready after %.0fs; audio may be silent", timeout)
+                self.db.log("error", "Voice encryption (DAVE) wasn't ready in time; that clip may have been silent")
+        await asyncio.sleep(0.4)  # let the first packets settle
+        return loop.time() - start
 
     def lock(self, guild):
         return self.locks.setdefault(guild.id, asyncio.Lock())
@@ -60,19 +108,30 @@ class Soundboard(commands.Cog):
                     await vc.move_to(channel)
                 elif not vc:
                     vc = await channel.connect(self_deaf=True, timeout=15)
-            except (discord.ClientException, asyncio.TimeoutError, discord.HTTPException) as e:
+            except (discord.ClientException, asyncio.TimeoutError, discord.HTTPException, RuntimeError) as e:
+                self.db.log("error", f"Couldn't join voice: {e}")
                 return f"couldn't join voice: {e}"
             loop = asyncio.get_running_loop()
             try:
+                await self.wait_until_audible(vc)
                 for _ in range(max(1, min(int(times), 10))):
                     if guild.id in self.cancel:
                         break
                     done = asyncio.Event()
-                    vc.play(self.source(sound["file"]), after=lambda e: loop.call_soon_threadsafe(done.set))
+                    errors = []
+
+                    def finished(err, done=done, errors=errors):
+                        if err:
+                            errors.append(err)
+                        loop.call_soon_threadsafe(done.set)
+                    vc.play(self.source(sound["file"]), after=finished)
                     await done.wait()
+                    if errors:  # ffmpeg died, bad file... used to fail silently
+                        raise errors[0]
                     await asyncio.sleep(0.2)
             except Exception as e:  # ffmpeg/opus missing, etc.
                 log.exception("Playback failed")
+                self.db.log("error", f"Playback of {sound['name']} failed: {type(e).__name__}: {e}")
                 return f"playback failed: {e}"
             finally:
                 if vc.is_connected():
