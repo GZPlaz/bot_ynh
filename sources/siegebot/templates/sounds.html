@@ -1,5 +1,7 @@
 {% extends "base.html" %}{% block body %}
 <h1>🔊 Soundboard</h1>
+{% for name, v in diag.items() if not v[0] %}<div class="flash" style="border-color:var(--bad);background:#2a1215">⚠️ Voice won't work: <b>{{ name }}</b>: {{ v[1] }}</div>{% endfor %}
+{% if diag and diag.values()|map('first')|select|list|length == diag|length %}<p class="muted">✅ Voice check: ffmpeg, opus and Discord's voice encryption are all available.</p>{% endif %}
 <p class="muted">The bot joins the call, plays the sound, and leaves before anyone can react. Sounds starting with <code>fake_</code> are sneaky fake game cues; the rest are pure noise.</p>
 <form method="post" action="{{ base }}/sounds/play" class="card">
   <div class="row">
